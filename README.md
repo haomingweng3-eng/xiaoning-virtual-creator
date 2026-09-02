@@ -2,7 +2,7 @@
 
 小柠是一个真实 LLM 与真实商品 Provider 驱动的 Lifestyle Virtual Creator：先理解情绪、延续相关上下文和表达自己的生活方式观点，只有用户明确需要挑商品时才进入带货。
 
-![小柠首页](artifacts/visual-qa/01-home.png)
+![小柠首页](artifacts/release-screenshots/01-home.png)
 
 ## 核心能力
 
@@ -127,6 +127,7 @@ docs/
   final-report.md
   delivery-outline.md
 artifacts/visual-qa/
+artifacts/release-screenshots/       # 最终提交文档使用的 9 张截图
 ```
 
 ## 为什么不用重型 Live2D / 实时数字人

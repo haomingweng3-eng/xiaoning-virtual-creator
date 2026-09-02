@@ -1,115 +1,158 @@
-# Final MVP 开发问题与解决思路
+# 小柠 Final MVP 项目报告
 
-## 1. 最终产品
+## 一、项目概述
 
-小柠是 Lifestyle Virtual Creator：第一层是 IP 虚拟达人存在感，第二层是自然互动与非恋爱化情绪陪伴，第三层是在明确需求下用真实商品证据完成带货。产品不是 AI 女友、客服、ChatGPT clone 或商城搜索页。
+小柠是一个在 24 小时 Vibe Coding 笔试周期内完成的“情感陪伴 + 智能带货”虚拟达人 MVP。产品以原创 IP 虚拟达人为第一视觉中心，先理解用户的情绪和当前话题，再在用户明确需要挑选商品时调用真实商品 Provider。它不是 AI 女友、客服系统、ChatGPT clone 或商城搜索页。
 
-## 2. 传统电商 API 接入受阻
+## 二、需求拆解
 
-开发中尝试过 SerpAPI 与拼多多开放平台。SerpAPI 受手机验证阻塞；PDD 需要 pid、权限与审核，无法在 24 小时内形成稳定复现链路。旧手工测试脚本还曾遗留真实 key，最终交付前已删除并完成 secret scan。
+- **聊天**：真实 OpenAI-compatible LLM 对话，默认输出 1–3 个自然 message segments。
+- **情感陪伴**：理解正负面情绪，保留事实边界，不把普通陪伴写成恋爱关系。
+- **虚拟达人**：原创 IP、AvatarStage、实时状态与最近互动共同构成直播间感。
+- **智能带货**：语义分析与确定性规则共同决定是否进入 CURATE。
+- **真实数据**：商品来自 Shopify Global Catalog，必要时使用 Tavily fallback；不使用 mock 商品。
 
-解决方案是解耦 `Commerce Provider`：`server/src/shopifyCatalog.js` 使用 Shopify Global Catalog；`server/src/productSearch.js` 在 Shopify 空结果或不可用时降级 Tavily。Orchestrator 只依赖统一的 `{ products, unavailable }`，不与某个商家 API 绑定。
+## 三、产品方案
 
-## 3. Tavily 是 Web Search，不是 Catalog
+主界面采用“IP Virtual Host + Recent Interactions + Composer + CURATE-only Product Shelf”。完整聊天记录收进 secondary drawer，避免主页面退化成传统 Chat Panel。商品是主播观点的辅助信息，只在 `interaction_mode = CURATE` 且存在可信商品时展示。
 
-真实 Tavily 结果可能是百科、文章、攻略、排行榜、搜索页，或缺价格、缺图片。直接渲染会把页面变成不可信的“搜索结果”。
+## 四、核心用户流程
 
-解决方案是 Product Rendering Gate：过滤内容页词汇和路径、要求 HTTP 具体商品 URL、URL canonicalization、标题/URL 去重，并保留缺失字段为 `null`。0 个可信商品是合法结果，不为凑 2–3 张卡片降低标准。
+1. 用户进入小柠直播间，看到虚拟达人和轻量话题入口。
+2. 用户分享近况，小柠根据情绪与语义选择 REACT、SHARE、ASK 或 CALLBACK。
+3. 潜在需求只继续交流，不立即搜索商品。
+4. 用户明确提出“帮我看看”后进入 CURATE。
+5. 小柠先表达判断，前端等待 720ms，再展开真实 Product Shelf。
+6. 没有可信商品时允许返回 0 张卡片，并明确说明不乱推。
 
-## 4. 商品幻觉与 Product Evidence
-
-LLM 可能根据标题自行补出续航、防水等级、重量、芯片、降噪效果，或者说“小柠亲测/买过”。这会破坏带货可信度。
-
-解决方案：
-
-- Provider normalization 保留 title、description、productType、vendor、tags、options、variants、metadata、price/currency。
-- `server/src/productInsights.js` 以确定性规则提取 selling points，每一条都带 `evidence`。
-- 未被 evidence 支持的参数不进入 UI。
-- personalized reason 只组合“用户当前明确需求 + 商品真实证据”。
-- `validateReply` 阻止虚构亲测和非 CURATE 商品内容。
-- 同屏商品证据侧重点相同会去重；差异不足时少展示。
-
-真实样例（2026-09-02 Golden Test）：
+## 五、技术架构
 
 ```text
-Raw Product Evidence
-title: OpenRun
-description: Lightweight, waterproof wireless headphones ... open-ear ... during workouts.
-price: USD 129.95
-
-ProductInsights
-- 运动场景
-  evidence: description 中明确包含 workouts
-- 开放式聆听
-  evidence: description 中明确包含 open-ear
-- 轻量取向
-  evidence: description 中明确包含 Lightweight
-
-Personalized Reason
-你现在找的是跑步场景，商品资料也明确把运动列为使用方向，所以我把它留下来比较。
+React UI / AvatarStage
+  → POST /api/chat + sessionId
+  → Session Isolation
+  → ConversationAnalysis
+  → Deterministic Interaction Policy
+  → OpenAI-compatible LLM
+  → Shopify Global Catalog
+  → Tavily fallback
+  → Product Rendering Gate
+  → Product Evidence
+  → ProductInsights
+  → Creator Reply + Product Shelf
 ```
 
-## 5. Chatbot 感
+前端使用 React 18 + Vite，后端使用 Node.js + Express，Session 使用服务端内存 `Map<sessionId, Session>`。
 
-最初形态是“用户一句、AI 一句”的聊天页面，后来真人大图又变成“Chatbot + Avatar 海报”，人物和互动仍然割裂。
+## 六、情感陪伴实现
 
-解决方案是 Virtual Creator interaction model：`REACT / SHARE / ASK / CALLBACK / CURATE` 控制互动目的；主页面只保留最近 2–4 条 interaction，完整历史进入 secondary drawer；Composer、topic、状态与人物处于一个 AvatarStage。商品是主播观点的辅助层，只在 CURATE 后延迟 720ms 出现。
+### ConversationAnalysis
 
-## 6. 静态真人图诡异
+每轮输出 emotion、shopping intent、recommendation readiness、need/category 和 current topic。模型负责语义理解，确定性规则负责约束高风险行为。
 
-真人图占 70–80vh 时像巨型海报，压迫且与界面割裂。
+### Interaction Model
 
-解决方案是原创 `xiaoning-main.png` IP Virtual Host：Desktop 约 39% 舞台宽度，人物与当前互动共享同一直播空间；390px 时人物区域不超过 35vh。状态通过文字、暖色 tone 与 `scale(1) → scale(1.008)` CSS breathing 表达，不伪造口型。
+`REACT / SHARE / ASK / CALLBACK / CURATE` 描述小柠这一轮的互动目的。负面情绪确定性禁止商品搜索；latent intent 禁止搜索；implicit intent 只有在 readiness 达标且已有明确 need/category 时才可能进入推荐判断。
 
-## 7. 过度亲密与恋爱偏移
+### Fact / Inference
 
-情感陪伴容易被误做成恋爱剧情。模型也可能把“和喜欢的人出去”直接称为约会，甚至推断对方喜欢用户。
+`userFacts` 只保存用户明确说过、能在原消息中核对的事实。系统不会把“第一次和喜欢的人出去”自动推断成约会，也不会推断双方关系。
 
-解决方案是明确情感陪伴边界：情绪理解 + 连续上下文 + 自然互动，不做亲密度或关系进度。`userFacts` 只保存用户明确说过且能在原消息中核对的事实；回复 sanitizer 不允许自动改写成约会或恋爱结论。Golden CASE 9 验证无约会标签和互相喜欢推断。
+### Memory relevance
 
-## 8. Memory 污染
+历史、偏好和事实不会每轮全部注入 Prompt。相关性规则优先匹配用户原话和受控语义组；当前话题切换时更新 `currentTopic`，商品类别切换时替换 `pendingProduct`。新 Session 拥有完全独立的 history、facts、preferences、topics 和 pendingProduct。
 
-真实浏览器曾出现“想看看 iPhone17”却继续显示跑步耳机话题。根因包括全局 Session、Header 读取 stale recent topic、pendingProduct 生命周期和无相关性地注入全部 Memory。
+## 七、智能带货实现
 
-解决方案：
+### Commerce Provider
 
-- `Map<sessionId, Session>` 隔离 history、facts、preferences、topics、pendingProduct。
-- Header 只读取 `currentTopic`。
-- 新对话生成新的 UUID，并清空前端历史。
-- Memory relevance 使用受控语义词并优先匹配用户原话，不再用任意中文 2–4 字片段。
-- pendingProduct 只保存明确商品品类；类别切换时替换。
-- Topic Switch 真实序列“跑步 → 耳机 → iPhone → 工作 → 再回耳机”通过，最终召回跑步/耳机而不带入 iPhone。
+Orchestrator 只依赖统一 Provider 返回结构，不与前端耦合。
 
-## 9. 商品价格与缺图
+### Shopify
 
-早期 UI 会显示 `169.99`，用户无法知道币种；缺图时又会形成巨大空卡片。
+`server/src/shopifyCatalog.js` 使用 Shopify Global Catalog，并保留 title、description、productType、vendor、tags、options、variants、metadata、price 和 currency。
 
-解决方案：只有 price 和有效 ISO currency 同时存在才用 `Intl.NumberFormat` 渲染；未知币种显示“查看实时价格”。图片缺失不造假 URL，使用低视觉重量 fallback，并在文档诚实说明外部数据限制。
+### Tavily fallback
 
-## 10. 测试与 Visual QA 问题
+Shopify 空结果或不可用时调用 Tavily。Tavily 是网页搜索而非商品 Catalog，因此结果必须继续经过严格过滤。
 
-只跑单元测试不能证明真实 LLM、Provider、响应式和视觉层级。Visual QA 初版还出现两个脚本 bug：路径空格被写成 `%20` 目录、`viewportSize` 不是 Playwright context 参数，导致“mobile 截图”实际上仍为 desktop。
+### Product Gate
 
-解决方案：`fileURLToPath` 处理带空格路径；使用 `browser.newContext({ viewport })`；PNG 像素尺寸实际验证为 1440、1024、768、390。最终 Visual QA 报告记录业务元数据，不只保存图片。
+过滤文章、攻略、排行榜、搜索页、非具体商品 URL 和重复结果。无法较高可信判断为具体商品时不展示；0 个可信商品是合法结果。
 
-## 11. 时间约束与工程取舍
+### Product Evidence
 
-没有实现 Live2D、LiveTalking、Wav2Lip、MuseTalk、实时 TTS/WebRTC 数字人、登录、数据库和支付。它们会把 24 小时 MVP 的主要风险从产品可信度转移到模型部署、实时媒体和基础设施。当前选择原创 IP + CSS 状态、内存 Session、真实 LLM、真实商品 Provider 和 evidence-backed commerce，更稳定，也更容易复现与解释。
+所有可见卖点必须能追溯到 Provider 字段。未知币种不显示裸金额，缺失参数不会由 LLM 补齐。
 
-## 12. 验收结果
+### ProductInsights
 
-- `npm test`：Server 55 tests + Client 11 tests，全部通过。
-- `npm run build`：Vite production build。
-- `npm run qa:golden`：10/10 real LLM cases PASS。
-- `npm run qa:visual`：9/9 browser cases PASS，覆盖 1440/1024/768/390。
-- Shopify：Golden CASE 5/10 实际返回真实商品。
-- Tavily：作为真实 fallback 保留；本次成功路径由 Shopify 命中，因此没有伪造 Tavily 商品。
+`server/src/productInsights.js` 输出 selling points、suitableFor、personalizedReason、tradeoff、confidence，并为每条 selling point 保留 evidence。个性化理由只组合用户当前明确需求和商品真实证据。
 
-## 13. 已知限制
+真实链路示例：
 
-- Session 在内存中，服务重启会丢失。
-- 无登录、数据库、支付闭环。
-- 不是实时 Live2D 或口型同步数字人。
-- 商品字段依赖外部 Provider，可能缺价格、图片或 evidence。
-- 外部 LLM/Provider 网络与额度会影响结果。
-- 无可信商品时系统会返回 0 个商品。
+```text
+Raw evidence:
+description = Lightweight, waterproof, open-ear, designed for workouts
+price = USD 129.95
+
+ProductInsights:
+运动场景    ← workouts
+开放式聆听  ← open-ear
+轻量取向    ← Lightweight
+
+Personalized reason:
+用户当前明确寻找跑步场景耳机，商品资料也明确列出运动使用方向。
+```
+
+## 八、虚拟达人交互设计
+
+原创 `xiaoning-main.png` 与最近互动共享同一个 AvatarStage。Desktop 中人物约占舞台 39%，390px Mobile 中人物区控制在约 35vh。状态包括 idle、listening、thinking、warm、happy、curate；人物只使用轻微 CSS breathing，不伪造口型或实时视频能力。
+
+## 九、真实数据说明
+
+- 对话使用真实 OpenAI-compatible API。
+- 商品优先来自 Shopify Global Catalog。
+- Shopify 不可用或无结果时使用 Tavily 实时搜索。
+- QA 不注入 mock 商品。
+- 外部 Provider 缺字段时保留为空，不生成虚假价格、图片或参数。
+- 本轮 Golden CASE 5/10 与 Visual CURATE 均返回真实 Shopify 商品。
+
+## 十、测试与质量保障
+
+- **Unit / Integration**：Server 55/55，Client 11/11。
+- **Production Build**：Vite build exit 0。
+- **Golden QA**：10/10，覆盖情绪、正向反馈、隐式需求、明确带货、取消带货、Session 隔离、Callback、事实边界和 Product Evidence。
+- **Visual QA**：9/9，覆盖 1440、1024、768、390；所有截图来自真实浏览器和真实前后端。
+- **Release screenshots**：`artifacts/release-screenshots/`。
+
+## 十一、开发过程中遇到的问题与解决方案
+
+1. **传统电商 API 权限受阻**：PDD 等平台需要审核和额外权限。通过 Provider 解耦，采用可运行的 Shopify Global Catalog，并保留 Tavily fallback。
+2. **Tavily 不是 Catalog**：网页结果可能是文章或排行榜。增加 Product Rendering Gate，宁可返回 0 商品。
+3. **商品幻觉**：LLM 容易根据标题补参数。增加确定性 Product Evidence / ProductInsights，每条卖点保留来源。
+4. **Chatbot + Avatar 感**：传统左右聊天布局让人物像海报。改为 AvatarStage、最近互动和 CURATE-only Shelf。
+5. **真人大图压迫**：替换为原创 IP，并降低人物视觉重量，保持舞台和对话一体。
+6. **恋爱化推断**：加入 Fact / Inference 边界，禁止把模糊关系写成确定事实。
+7. **Session 污染**：曾出现 iPhone 会话继续引用跑步耳机。改为 sessionId 隔离、currentTopic 生命周期、pendingProduct 替换与 Memory relevance gating。
+8. **Visual QA 假 Mobile**：修复错误 viewport 参数，并实际校验 PNG 像素尺寸。
+9. **带空格路径错误**：QA 脚本使用 `fileURLToPath`，避免生成错误的 `%20` 目录。
+
+## 十二、技术取舍
+
+24 小时内优先保证对话边界、上下文可信度、真实商品链路和可复现 QA。没有引入 Live2D、LiveTalking、Wav2Lip、MuseTalk、实时 TTS/WebRTC、数据库或支付系统，避免把主要风险转移到重型媒体与基础设施。
+
+## 十三、已知限制
+
+- Session 仅保存在内存中，服务重启后丢失。
+- 无登录、持久化数据库、支付和下单闭环。
+- 当前不是实时 Live2D、视频数字人或口型同步。
+- 外部 LLM/Provider 受网络、额度和 API 可用性影响。
+- 真实商品可能缺少价格、图片或足够 evidence。
+- 无可信结果时系统会返回 0 个商品。
+
+## 十四、GitHub
+
+- 本地 branch：`main`
+- Release commit：以最终 Release Freeze commit hash 为准。
+- 当前没有 Git remote，且本机没有 `gh` CLI。
+- GitHub URL 只能在真实创建并 push 成功后填写，不提供虚假链接。

@@ -1,6 +1,6 @@
 # 最终提交文档大纲
 
-> 用于整理“需求 & 产品 & 实现截图 & GitHub 链接”的最终提交材料。截图已经生成；GitHub 地址只能在真实 push 后填写。
+> 用于整理“需求 & 产品 & 实现截图 & GitHub 链接”的最终提交材料。最终筛选截图位于 `artifacts/release-screenshots/`；GitHub 地址只能在真实 push 后填写。
 
 ## 1. 项目背景
 

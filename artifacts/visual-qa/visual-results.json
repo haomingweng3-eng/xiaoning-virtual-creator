@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T03:14:04.632Z",
+  "generatedAt": "2026-09-02T04:24:43.041Z",
   "appUrl": "http://localhost:5173/",
   "cases": [
     {
@@ -29,7 +29,7 @@
       "input": "今天终于把项目做完了。",
       "interaction_mode": "REACT",
       "emotion": "relieved",
-      "currentTopic": "完成项目",
+      "currentTopic": "工作项目完成",
       "commerceCalled": false,
       "provider": null,
       "productsCount": 0,
@@ -50,7 +50,7 @@
       "filename": "05-pre-commerce.png",
       "input": "最近开始跑步。 → 跑步的时候耳机老掉。",
       "interaction_mode": "SHARE",
-      "emotion": "4",
+      "emotion": "neutral",
       "currentTopic": "耳机",
       "commerceCalled": false,
       "provider": null,
