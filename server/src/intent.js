@@ -12,6 +12,7 @@ const PRODUCT_CATEGORIES = [
 ];
 const CONFIRMATIONS = ['好', '好呀', '可以', '需要', '要', '帮我看看', '麻烦你', '行', '嗯', '那你帮我'];
 const COMMERCE_EXIT_WORDS = ['算了', '先不买', '不买了', '省点钱', '省钱', '不用看了', '不需要了'];
+const EXPLICIT_RECOMMENDATION_PATTERN = /让我推荐|你推荐|推荐几个|推荐一下|帮我推荐|帮我挑|帮我选|直接推荐|直接给我推荐|有什么值得买|那你帮我看看/u;
 
 function findIncluded(text, candidates) {
   return candidates.find((candidate) => text.includes(candidate));
@@ -52,6 +53,10 @@ export function findProductCategory(message) {
   const text = String(message || '');
   if (/i\s*phone\s*17/i.test(text) || /苹果\s*17/.test(text)) return 'iPhone 17';
   return findIncluded(text, PRODUCT_CATEGORIES) || null;
+}
+
+export function hasExplicitRecommendationRequest(message) {
+  return EXPLICIT_RECOMMENDATION_PATTERN.test(String(message || ''));
 }
 
 // 保留旧名称以兼容现有测试

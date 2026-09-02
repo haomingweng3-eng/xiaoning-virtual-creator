@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createChatOrchestrator } from '../src/orchestrator.js';
 import { applyConversationFlowPolicy, applyConversationPolicy } from '../src/conversationAnalysis.js';
-import { createSession } from '../src/session.js';
+import { createSession, mergeUserFacts } from '../src/session.js';
 import {
   CHARACTER_CORE,
   CONVERSATION_STYLE,
@@ -342,6 +342,39 @@ describe('final interaction model', () => {
     const result = applyConversationPolicy({ shopping_intent: 'none', interaction_mode: 'SHARE', recommendation_readiness: 0 }, '那你帮我看看有什么合适的', { pendingProduct: '耳机' });
     expect(result.interaction_mode).toBe('CURATE');
     expect(result.topic).toBe('耳机');
+  });
+
+  test('explicit recommendation follow-up curates the known product without asking again', async () => {
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: 'iPhone 17', product_category: 'iPhone 17', shopping_intent: 'latent', interaction_mode: 'ASK' }))
+      .mockResolvedValueOnce(creatorCall('先给你挑几款。'))
+      .mockResolvedValueOnce(analysisCall({ topic: 'iPhone 17', shopping_intent: 'explicit', interaction_mode: 'ASK' }))
+      .mockResolvedValueOnce(creatorCall('我直接帮你看几款。'));
+    const search = vi.fn().mockResolvedValue({ products: [{ title: 'iPhone 17', price: 5999, currency: 'CNY', image: 'https://example.com/iphone.jpg', url: 'https://example.com/iphone' }], unavailable: false });
+    const session = createSession();
+    const chat = createChatOrchestrator({ complete, search });
+    await chat('我想买iPhone17', session);
+    const result = await chat('让我推荐啊', session);
+    expect(result.interaction).toBe('CURATE');
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  test('conditional assistant language cannot become a user fact', () => {
+    const session = createSession();
+    mergeUserFacts(session, ['你之前用安卓的话'], '你之前用安卓的话');
+    expect(session.userFacts).toEqual([]);
+  });
+
+  test('assistant hypothesis in prior history is not persisted as a user fact', async () => {
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: '手机', interaction_mode: 'SHARE', explicit_facts: ['你之前用安卓'] }))
+      .mockResolvedValueOnce(creatorCall('我先不替你假设。'));
+    const session = createSession({});
+    session.history = [
+      { role: 'assistant', content: '如果你之前用安卓的话，可以考虑换成 iPhone。' },
+    ];
+    await createChatOrchestrator({ complete, search: vi.fn() })('让我推荐啊', session);
+    expect(session.userFacts).not.toContain('你之前用安卓');
   });
 
   test('an explicitly mentioned category becomes pending without searching immediately', async () => {

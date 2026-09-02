@@ -1,5 +1,5 @@
 import { ANALYZE_TOOL, FORCE_ANALYZE, buildAnalysisMessages } from './prompts.js';
-import { classifyMessageFallback, findProductCategory } from './intent.js';
+import { classifyMessageFallback, findProductCategory, hasExplicitRecommendationRequest } from './intent.js';
 
 const MODES = ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'];
 const FLOWS = ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'];
@@ -106,11 +106,16 @@ export function applyConversationPolicy(analysis, message, context = {}) {
   }
 
   const explicitRequest = fallback.scene === 'shopping';
-  const hasKnownNeed = Boolean(context.pendingProduct);
-  const explicitConfirmation = explicitRequest && hasKnownNeed;
-  const implicitReady = next.shopping_intent === 'implicit' && next.recommendation_readiness >= 0.75 && hasKnownNeed;
+  const hasStoredNeed = Boolean(context.pendingProduct || findProductCategory(context.currentTopic));
+  const hasKnownNeed = Boolean(
+    context.pendingProduct
+      || findProductCategory(context.currentTopic)
+      || findProductCategory(message),
+  );
+  const explicitConfirmation = hasStoredNeed && hasExplicitRecommendationRequest(message);
+  const implicitReady = next.shopping_intent === 'implicit' && next.recommendation_readiness >= 0.75 && hasStoredNeed;
 
-  if (explicitRequest || explicitConfirmation) {
+  if ((explicitRequest && hasKnownNeed) || explicitConfirmation) {
     return {
       ...next,
       shopping_intent: 'explicit',
@@ -149,6 +154,7 @@ function fallbackToAnalysis(message, context = {}) {
 function applyPolicies(analysis, message, session) {
   const business = applyConversationPolicy(analysis, message, {
     pendingProduct: session.pendingProduct,
+    currentTopic: session.currentTopic,
     userFacts: session.userFacts,
   });
   return {

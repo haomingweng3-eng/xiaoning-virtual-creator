@@ -58,6 +58,7 @@ function normalizeFact(value) {
 function isSafeExplicitFact(value) {
   return value.length >= 4
     && value.length <= 120
+    && !/(如果|假设|可能|也许|要是|的话)/u.test(value)
     && !/(对方|他|她|他们).*(喜欢|爱|在意)/u.test(value)
     && !/(恋爱了|约会|情侣|亲密度|一定会|肯定会)/u.test(value);
 }
