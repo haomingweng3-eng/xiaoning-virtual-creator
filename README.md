@@ -9,7 +9,8 @@
 - **Chat**：真实 OpenAI-compatible Tool Calling 对话，默认 1–3 个自然 message segments。
 - **Emotional Companion**：识别情绪并自然回应；负面情绪确定性禁止搜索商品。
 - **Virtual Creator**：原创 IP AvatarStage、`REACT / SHARE / ASK / CALLBACK / CURATE` 五种互动模式、最近 2–4 条互动与完整历史 drawer。
-- **Memory**：每个 `sessionId` 独立保存 history、明确事实、偏好、话题和 pendingProduct；相关时召回，无关时隔离。
+- **Conversation Management**：`visitorId` 与 `conversationId` 分离；支持新建、列表、切换、删除、刷新恢复，并用 JSON FileStore 在 server restart 后恢复。
+- **Memory**：每个 `conversationId` 独立保存 history、明确事实、偏好、话题和 pendingProduct；相关时召回，无关时隔离。
 - **Commerce**：Shopify Global Catalog 优先，Tavily fallback；只有 `CURATE && products.length > 0` 才展示 Product Shelf。
 - **Product Evidence**：所有卖点来自真实 Provider 字段并保留 evidence；无依据参数、虚构亲测和裸价格不会展示。
 
@@ -22,8 +23,9 @@
 ```mermaid
 flowchart TD
     U[User] --> UI[React UI / IP AvatarStage]
-    UI --> API[POST /api/chat + sessionId]
+    UI --> API[POST /api/chat + visitorId + conversationId]
     API --> SI[Session Isolation]
+    SI --> FS[FileStore]
     SI --> CA[ConversationAnalysis]
     CA --> IP[Deterministic Interaction Policy]
     IP --> LLM[OpenAI-compatible LLM]
@@ -80,6 +82,9 @@ npm run build
 # 10 个真实 LLM Golden Conversation cases
 npm run qa:golden
 
+# 自然度与 Prompt 压缩验收（5 个真实场景，含 10 轮连续对话）
+npm run qa:naturalness
+
 # 首次运行 Visual QA 前安装 Chromium
 npx playwright install chromium
 npm run qa:visual
@@ -113,21 +118,25 @@ client/
   src/App.jsx                      # AvatarStage、互动、Composer、Shelf
   src/index.css                    # 1440/1024/768/390 响应式视觉
 server/src/
-  app.js                           # sessionId -> Session Map
+  app.js                           # visitor/conversation API + session Map
+  fileStore.js                     # JSON persistence across restart
   conversationAnalysis.js          # LLM analysis + deterministic policy
   prompts.js                       # 角色、事实边界、memory relevance
   orchestrator.js                  # 回复/搜索/状态生命周期
   productSearch.js                 # Tavily + Product Gate
   shopifyCatalog.js                # Shopify Global Catalog
   productInsights.js               # Evidence -> insights -> pitch
+  conversationNaturalness.js       # Transcript naturalness metrics
 scripts/
   golden-conversation.mjs          # 10 个真实 Golden cases
+  naturalness-qa.mjs               # 自然对话与话题切换验收
   visual-qa.mjs                    # 浏览器截图与 HTML 报告
 docs/
   final-report.md
   delivery-outline.md
 artifacts/visual-qa/
 artifacts/release-screenshots/       # 最终提交文档使用的 9 张截图
+artifacts/naturalness-qa/            # 真实自然度验收报告与 transcript
 ```
 
 ## 为什么不用重型 Live2D / 实时数字人
@@ -147,5 +156,6 @@ artifacts/release-screenshots/       # 最终提交文档使用的 9 张截图
 ## 更多文档
 
 - [开发问题与解决方案](docs/final-report.md)
+- [Conversation Management 交付报告](docs/conversation-management-report.md)
 - [最终提交文档大纲](docs/delivery-outline.md)
 - [Visual QA 报告](artifacts/visual-qa/report.html)

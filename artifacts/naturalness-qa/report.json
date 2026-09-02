@@ -1,0 +1,322 @@
+{
+  "generatedAt": "2026-09-02T06:21:10.626Z",
+  "apiUrl": "http://localhost:3001/api/chat",
+  "cases": [
+    {
+      "name": "CASE 1 · completion can stop naturally",
+      "assertions": [
+        {
+          "label": "not customer service",
+          "pass": true
+        },
+        {
+          "label": "no forced question",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "role": "user",
+          "content": "今天项目终于做完了。"
+        },
+        {
+          "role": "assistant",
+          "content": "恭喜收工！这种时候最舒服的感觉其实是收尾那一下，电脑可以合上了，脑子里那根一直绷着的弦终于松下来。\n\n接下来不用急着安排什么，先让今天空着也挺好。喝点什么，或者就发会儿呆，都是正经事。",
+          "topic": "项目完成",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "name": "CASE 2 · tired conversation is not an interview",
+      "assertions": [
+        {
+          "label": "no customer-service phrase",
+          "pass": true
+        },
+        {
+          "label": "no consecutive interview questions",
+          "pass": true
+        }
+      ],
+      "metrics": {
+        "assistantTurns": 3,
+        "questionTurns": 0,
+        "questionRatio": 0,
+        "consecutiveQuestionPairs": 0,
+        "repeatedUserExpressions": 0,
+        "customerServiceTurns": 0,
+        "topicTransitions": 2
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "最近好累。"
+        },
+        {
+          "role": "assistant",
+          "content": "累的时候其实不需要做什么大事，先把今天过完就好。\n\n我最近倒是发现，累的时候反而别硬撑着一件件做，挑一件最不费力的先做掉，剩下的事明天再说，也没什么问题。",
+          "topic": "疲惫/劳累",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "事情有点堆在一起。"
+        },
+        {
+          "role": "assistant",
+          "content": "堆在一起的感觉确实很压人。我的办法是别去数还剩多少件，先从中挑一件最小的、十分钟内能做完的，做掉它。不是为了完成多少，是为了让那个“堆”开始松动一点。\n\n如果现在连最小的都提不起劲，那就先放着，不勉强自己。事情不会因为你今天没碰它就更糟，但你会因为逼自己而更累。",
+          "topic": "疲惫与事务堆积",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "今天先不想解释了。"
+        },
+        {
+          "role": "assistant",
+          "content": "好，那就不解释了。\n\n有些话今天不想说，就留给明天甚至更后面的自己。解释这件事本来就挺耗人的，不想的时候，沉默也是休息的一种。",
+          "topic": "疲惫与事情堆积",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "name": "CASE 3 · running switches to phone",
+      "assertions": [
+        {
+          "label": "topic is phone",
+          "pass": true
+        },
+        {
+          "label": "flow is SHIFT",
+          "pass": true
+        },
+        {
+          "label": "final reply does not pull old gear context back",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "role": "user",
+          "content": "最近开始跑步了。"
+        },
+        {
+          "role": "assistant",
+          "content": "跑步刚开始，我反而觉得不用急着把整套装备配齐。对我来说，最在意的就是鞋子合不合脚，其他的慢慢来就好。\n\n能让自己稳定出门跑起来，比看起来像个跑者重要多了。你跑得多吗，还是刚开始试水？",
+          "topic": "跑步",
+          "flow": "EXPAND",
+          "interaction": "SHARE"
+        },
+        {
+          "role": "user",
+          "content": "不过这两天其实也没怎么跑。"
+        },
+        {
+          "role": "assistant",
+          "content": "那太正常了，刚开始都是这样。跑步最难的不是跑起来，是隔了几天再出门那次。\n\n这两天没跑也没什么，别给自己太大压力。哪天状态好、想出门了再跑，反而比硬逼着自己更容易坚持下来。",
+          "topic": "跑步习惯",
+          "flow": "CONTINUE",
+          "interaction": "SHARE"
+        },
+        {
+          "role": "user",
+          "content": "算了，不聊跑步了，我想换个手机。"
+        },
+        {
+          "role": "assistant",
+          "content": "行，跑步的事先放一放。换手机的话，你是大概有预算范围，还是纯粹觉得现在这台不太行了？\n\n如果只是有点卡、电池不太行，我可能会先想想有没有别的办法撑一撑；要是真的到那个点了，再认真挑一台能陪自己久一点的。",
+          "topic": "手机",
+          "flow": "SHIFT",
+          "interaction": "REACT"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "name": "CASE 4 · creator can hold an opinion",
+      "assertions": [
+        {
+          "label": "not rote agreement",
+          "pass": true
+        },
+        {
+          "label": "not customer service",
+          "pass": true
+        }
+      ],
+      "turns": [
+        {
+          "role": "user",
+          "content": "我觉得 AirPods 挺好的。"
+        },
+        {
+          "role": "assistant",
+          "content": "AirPods 确实是那种用起来不太会出错的东西，尤其如果你已经在苹果生态里。不过我自己倒是后来才买的，一开始觉得没必要，结果日常通勤听播客确实方便不少。\n\n但要说它是不是人人都该有，我倒不这么觉得。如果只是偶尔听歌、不常出门，有线耳机或者普通蓝牙耳机也完全够用，省下的钱可以做别的事。",
+          "topic": "AirPods",
+          "flow": "CONTINUE",
+          "interaction": "SHARE"
+        }
+      ],
+      "status": "PASS"
+    },
+    {
+      "name": "CASE 5 · ten-turn natural conversation",
+      "assertions": [
+        {
+          "label": "question ratio <= 40%",
+          "pass": true
+        },
+        {
+          "label": "at most one consecutive-question pair",
+          "pass": true
+        },
+        {
+          "label": "repeated user expressions <= 1",
+          "pass": true
+        },
+        {
+          "label": "no customer-service phrases",
+          "pass": true
+        },
+        {
+          "label": "topic changes at least twice",
+          "pass": true
+        },
+        {
+          "label": "phone section does not recall running",
+          "pass": true
+        }
+      ],
+      "metrics": {
+        "assistantTurns": 10,
+        "questionTurns": 2,
+        "questionRatio": 0.2,
+        "consecutiveQuestionPairs": 0,
+        "repeatedUserExpressions": 0,
+        "customerServiceTurns": 0,
+        "topicTransitions": 9
+      },
+      "turns": [
+        {
+          "role": "user",
+          "content": "今天项目终于做完了。"
+        },
+        {
+          "role": "assistant",
+          "content": "恭喜呀，做完一个项目那种松一口气的感觉挺真实的。可以好好喘一下了。\n\n今晚打算怎么犒劳自己？不需要多隆重，有时候就是一顿好吃的或者早点睡。",
+          "topic": "项目完成",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "现在脑子还有点空。"
+        },
+        {
+          "role": "assistant",
+          "content": "脑子空就让它空着，别急着填。项目刚收尾，这种放空反而是身体在给自己踩刹车。\n\n不用马上安排什么。散步、发会儿呆、或者就躺着刷点没营养的东西，都算数。",
+          "topic": "项目完成后的放松",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "我准备出去吃点东西。"
+        },
+        {
+          "role": "assistant",
+          "content": "这个点出去吃，挺好。忙完一个大项目之后，第一顿别太将就，但也不用搞太复杂——找那种坐下来就能吃到嘴里、不用等太久的地方，最舒服。\n\n如果是我，会想选个合口味的，哪怕只是一碗热汤面或者一份盖饭，只要对味，就比硬撑一顿大餐更解乏。吃到胃里踏实了，脑子反而能跟着缓过来。",
+          "topic": "放松/吃饭",
+          "flow": "SHIFT",
+          "interaction": "SHARE"
+        },
+        {
+          "role": "user",
+          "content": "想吃点热的。"
+        },
+        {
+          "role": "assistant",
+          "content": "热的，这个方向对。刚忙完就想吃口热乎的，身体比脑子诚实。\n\n你是想找那种汤汤水水能喝一口缓过来的，还是想啃点实在的、有嚼劲的？这个决定了往哪个方向走。",
+          "topic": "热食选择",
+          "flow": "SHIFT",
+          "interaction": "ASK"
+        },
+        {
+          "role": "user",
+          "content": "我觉得拉面不错。"
+        },
+        {
+          "role": "assistant",
+          "content": "拉面这个选择，我举双手赞成。那个热汤下去的一瞬间，整个人都能被暖回来，特别适合现在这种脑子还空着的状态。\n\n而且拉面有个好处——不用纠结配菜，一碗面加个蛋或者叉烧就够满足了。你现在需要的不是丰盛，是那种被踏实填满的感觉。",
+          "topic": "拉面",
+          "flow": "SHIFT",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "对了，最近开始跑步了。"
+        },
+        {
+          "role": "assistant",
+          "content": "刚开始跑的话，我反而觉得不用急着配齐装备。先把鞋穿舒服了，能稳定出门几次，比什么都重要。\n\n很多人一开始就买全套，结果跑了两次就搁置了。鞋合脚、衣服透气，其实差不多就够了。等真的跑出习惯来，再慢慢添也不迟。",
+          "topic": "跑步",
+          "flow": "SHIFT",
+          "interaction": "SHARE"
+        },
+        {
+          "role": "user",
+          "content": "不过这两天其实也没怎么跑。"
+        },
+        {
+          "role": "assistant",
+          "content": "没怎么跑也挺正常的，刚开始都是这样，别给自己太大压力。断个一两天不算放弃，更不是前功尽弃。\n\n我倒觉得你现在最需要的不是逼自己跑，而是先把“出门”这件事变轻松一点——比如就定个下楼走一圈的小目标，跑不跑再说。很多时候只要踏出那一步，反而就跑起来了。",
+          "topic": "跑步习惯",
+          "flow": "CONTINUE",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "算了，不聊跑步了，我想换个手机。"
+        },
+        {
+          "role": "assistant",
+          "content": "听起来今天确实挺烦的，先不用急着把它想明白。",
+          "topic": "手机",
+          "flow": "SHIFT",
+          "interaction": "REACT"
+        },
+        {
+          "role": "user",
+          "content": "我觉得 iPhone17 挺好。"
+        },
+        {
+          "role": "assistant",
+          "content": "这个我先不急着替你下结论，慢慢聊就好。",
+          "topic": "iPhone 17",
+          "flow": "EXPAND",
+          "interaction": "SHARE"
+        },
+        {
+          "role": "user",
+          "content": "但如果只是为了拍照升级，好像也没必要。"
+        },
+        {
+          "role": "assistant",
+          "content": "这个我先不急着替你下结论，慢慢聊就好。",
+          "topic": "换手机/iPhone17",
+          "flow": "EXPAND",
+          "interaction": "CURATE"
+        }
+      ],
+      "status": "PASS"
+    }
+  ]
+}

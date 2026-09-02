@@ -2,6 +2,7 @@ import { ANALYZE_TOOL, FORCE_ANALYZE, buildAnalysisMessages } from './prompts.js
 import { classifyMessageFallback } from './intent.js';
 
 const MODES = ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'];
+const FLOWS = ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'];
 
 function parseToolCall(call, expectedName) {
   if (!call || call.function?.name !== expectedName) return null;
@@ -24,7 +25,56 @@ function normalizeAnalysis(raw) {
     recommendation_readiness: Math.min(1, Math.max(0, Number.isFinite(recommendationReadiness) ? recommendationReadiness : 0)),
     explicit_facts: Array.isArray(raw.explicit_facts) ? raw.explicit_facts.map(String).filter(Boolean) : [],
     interaction_mode: MODES.includes(requestedMode) ? requestedMode : 'SHARE',
+    conversation_flow: FLOWS.includes(raw.conversation_flow) ? raw.conversation_flow : 'CONTINUE',
   };
+}
+
+export function countConsecutiveAssistantQuestions(history = []) {
+  const assistantReplies = history.filter((turn) => turn?.role === 'assistant');
+  let streak = 0;
+  for (let index = assistantReplies.length - 1; index >= 0; index -= 1) {
+    if (!/[？?]\s*$/u.test(String(assistantReplies[index]?.content || ''))) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+const TOPIC_FAMILIES = [
+  /项目|工作|加班|领导/u,
+  /吃|用餐|拉面|火锅|餐厅|食物/u,
+  /跑步|运动|健身/u,
+  /手机|i\s*phone/u,
+  /耳机|听歌|音乐|音质/u,
+  /穿搭|衣服|衬衫|牛仔裤/u,
+  /疲惫|压力|累/u,
+];
+
+export function topicsAreRelated(previousTopic, nextTopic) {
+  const previous = String(previousTopic || '').trim().toLowerCase();
+  const next = String(nextTopic || '').trim().toLowerCase();
+  if (!previous || !next) return false;
+  if (previous.includes(next) || next.includes(previous)) return true;
+  return TOPIC_FAMILIES.some((pattern) => pattern.test(previous) && pattern.test(next));
+}
+
+export function applyConversationFlowPolicy(analysis, message, session = {}) {
+  const requested = FLOWS.includes(analysis?.conversation_flow) ? analysis.conversation_flow : 'CONTINUE';
+  const text = String(message || '');
+  const previousTopic = String(session.currentTopic || '').trim();
+  const nextTopic = String(analysis?.topic || '').trim();
+  const explicitShift = /对了|另外|说起来|算了|不聊.+了|换个话题/u.test(text);
+
+  if (explicitShift || (previousTopic && nextTopic && !topicsAreRelated(previousTopic, nextTopic))) return 'SHIFT';
+  if (analysis?.interaction_mode === 'CALLBACK') return 'CALLBACK';
+
+  const necessaryCommerceQuestion = analysis?.interaction_mode === 'ASK'
+    && analysis?.shopping_intent === 'explicit';
+  if (countConsecutiveAssistantQuestions(session.history) >= 2 && !necessaryCommerceQuestion) return 'SHARE';
+
+  if (requested === 'CONTINUE' && previousTopic && nextTopic === previousTopic && Number(session.topicTurnCount) >= 3) {
+    return 'EXPAND';
+  }
+  return requested;
 }
 
 export function applyConversationPolicy(analysis, message, context = {}) {
@@ -80,17 +130,29 @@ function fallbackToAnalysis(message, context = {}) {
     recommendation_readiness: isStrongShopping ? 1 : isWeakShopping ? 0.3 : 0,
     explicit_facts: [],
     interaction_mode: hasNegative ? 'REACT' : isStrongShopping ? 'CURATE' : 'SHARE',
+    conversation_flow: 'SHARE',
   });
+}
+
+function applyPolicies(analysis, message, session) {
+  const business = applyConversationPolicy(analysis, message, {
+    pendingProduct: session.pendingProduct,
+    userFacts: session.userFacts,
+  });
+  return {
+    ...business,
+    conversation_flow: applyConversationFlowPolicy(business, message, session),
+  };
 }
 
 export async function analyzeConversation({ complete, session, message }) {
   try {
     const call = await complete({ messages: buildAnalysisMessages(session, message), tools: [ANALYZE_TOOL], toolChoice: FORCE_ANALYZE });
     const raw = parseToolCall(call, 'analyze_conversation');
-    if (raw) return { analysis: applyConversationPolicy(normalizeAnalysis(raw), message, { pendingProduct: session.pendingProduct, userFacts: session.userFacts }), source: 'llm' };
+    if (raw) return { analysis: applyPolicies(normalizeAnalysis(raw), message, session), source: 'llm' };
   } catch (err) {
     console.warn('LLM 对话分析失败，使用 fallback:', err.message);
   }
   const fallback = fallbackToAnalysis(message, { pendingProduct: session.pendingProduct });
-  return { analysis: applyConversationPolicy(fallback, message, { pendingProduct: session.pendingProduct, userFacts: session.userFacts }), source: 'fallback' };
+  return { analysis: applyPolicies(fallback, message, session), source: 'fallback' };
 }

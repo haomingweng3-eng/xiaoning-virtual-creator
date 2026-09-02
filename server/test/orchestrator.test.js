@@ -1,8 +1,13 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createChatOrchestrator } from '../src/orchestrator.js';
-import { applyConversationPolicy } from '../src/conversationAnalysis.js';
+import { applyConversationFlowPolicy, applyConversationPolicy } from '../src/conversationAnalysis.js';
 import { createSession } from '../src/session.js';
-import { buildAnalysisMessages } from '../src/prompts.js';
+import {
+  CHARACTER_CORE,
+  CONVERSATION_STYLE,
+  buildAnalysisMessages,
+  buildMessages,
+} from '../src/prompts.js';
 
 function toolCall(name, args) {
   return { id: `call-${name}`, type: 'function', function: { name, arguments: JSON.stringify(args) } };
@@ -23,6 +28,130 @@ function creatorCall(text, overrides = {}) {
 }
 
 describe('final interaction model', () => {
+  test('keeps character and conversation style prompts within their Chinese character budgets', () => {
+    const countChinese = (value) => (String(value).match(/[\u3400-\u9fff]/g) || []).length;
+    expect(countChinese(CHARACTER_CORE)).toBeGreaterThanOrEqual(300);
+    expect(countChinese(CHARACTER_CORE)).toBeLessThanOrEqual(500);
+    expect(countChinese(CONVERSATION_STYLE)).toBeGreaterThanOrEqual(200);
+    expect(countChinese(CONVERSATION_STYLE)).toBeLessThanOrEqual(350);
+  });
+
+  test('builds compact reply and analysis prompts without repeating code-enforced rules', () => {
+    const session = createSession();
+    session.currentTopic = '项目';
+    session.history = Array.from({ length: 10 }, (_, index) => ({
+      role: index % 2 ? 'assistant' : 'user',
+      content: index % 2 ? `项目回应${index}` : `项目进度${index}`,
+    }));
+    const analysis = {
+      emotion: 'relieved',
+      topic: '项目',
+      interaction_mode: 'SHARE',
+      conversation_flow: 'SHARE',
+    };
+
+    const replyMessages = buildMessages(session, '今天项目终于做完了', { analysis });
+    const replySystem = replyMessages[0].content;
+    const analysisSystem = buildAnalysisMessages(session, '今天项目终于做完了')[0].content;
+
+    expect(replySystem.length).toBeLessThan(1400);
+    expect(analysisSystem.length).toBeLessThan(900);
+    expect(replyMessages.length).toBeLessThanOrEqual(8);
+    expect(replySystem).not.toMatch(/Session isolation|Product Gate|只有 CURATE 允许商品搜索|pendingProduct 生命周期/);
+    expect(analysisSystem).not.toContain('小柠是 Lifestyle Virtual Creator');
+    expect((replySystem.match(/【相关创作者观点】/g) || [])).toHaveLength(1);
+  });
+
+  test('uses SHIFT when the user explicitly leaves the current topic', () => {
+    const session = createSession();
+    session.currentTopic = '跑步';
+    expect(applyConversationFlowPolicy(
+      { conversation_flow: 'CONTINUE', interaction_mode: 'SHARE', topic: '手机' },
+      '算了，不聊跑步了，我想换个手机。',
+      session,
+    )).toBe('SHIFT');
+  });
+
+  test('uses CALLBACK when the business interaction has relevant callback context', () => {
+    expect(applyConversationFlowPolicy(
+      { conversation_flow: 'CONTINUE', interaction_mode: 'CALLBACK', topic: '项目' },
+      '今天终于做完了。',
+      createSession(),
+    )).toBe('CALLBACK');
+  });
+
+  test('stops a third interview-style question after two question-ending replies', () => {
+    const session = createSession();
+    session.history = [
+      { role: 'user', content: '最近好累。' },
+      { role: 'assistant', content: '是工作太多吗？' },
+      { role: 'user', content: '事情堆在一起。' },
+      { role: 'assistant', content: '最烦的是哪一件？' },
+    ];
+    expect(applyConversationFlowPolicy(
+      { conversation_flow: 'CONTINUE', interaction_mode: 'SHARE', topic: '疲惫' },
+      '都有一点。',
+      session,
+    )).toBe('SHARE');
+  });
+
+  test('does not stay in CONTINUE after three turns on the same topic', () => {
+    const session = createSession();
+    session.currentTopic = '跑步';
+    session.topicTurnCount = 3;
+    expect(applyConversationFlowPolicy(
+      { conversation_flow: 'CONTINUE', interaction_mode: 'SHARE', topic: '跑步' },
+      '这两天还是没怎么跑。',
+      session,
+    )).toBe('EXPAND');
+  });
+
+  test('does not treat a more specific label in the same topic family as SHIFT', () => {
+    const session = createSession();
+    session.currentTopic = '项目完成';
+    expect(applyConversationFlowPolicy(
+      { conversation_flow: 'EXPAND', interaction_mode: 'REACT', topic: '项目完成后放松' },
+      '现在脑子还有点空。',
+      session,
+    )).toBe('EXPAND');
+  });
+
+  test('returns conversation flow and resets topic turns after a phone topic switch', async () => {
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: '手机', conversation_flow: 'CONTINUE' }))
+      .mockResolvedValueOnce(creatorCall('手机可以单独看，不用再绕回跑步。'));
+    const session = createSession();
+    session.currentTopic = '跑步';
+    session.topicTurnCount = 3;
+    const result = await createChatOrchestrator({ complete, search: vi.fn() })(
+      '算了，不聊跑步了，我想换个手机。',
+      session,
+    );
+    expect(result.conversationFlow).toBe('SHIFT');
+    expect(session.conversationFlow).toBe('SHIFT');
+    expect(session.currentTopic).toBe('手机');
+    expect(session.topicTurnCount).toBe(1);
+    expect(complete.mock.calls[1][0].messages[0].content).not.toContain('最近开始跑步');
+  });
+
+  test('retries when a third interview-style question is generated', async () => {
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: '疲惫', conversation_flow: 'CONTINUE' }))
+      .mockResolvedValueOnce(creatorCall('那你现在是什么感觉？'))
+      .mockResolvedValueOnce(creatorCall('先不用解释，今天就让自己慢一点。'));
+    const session = createSession();
+    session.history = [
+      { role: 'user', content: '最近好累。' },
+      { role: 'assistant', content: '是工作太多吗？' },
+      { role: 'user', content: '事情堆在一起。' },
+      { role: 'assistant', content: '最烦的是哪一件？' },
+    ];
+    const result = await createChatOrchestrator({ complete, search: vi.fn() })('都有一点。', session);
+    expect(result.reply).toBe('先不用解释，今天就让自己慢一点。');
+    expect(result.conversationFlow).toBe('SHARE');
+    expect(complete).toHaveBeenCalledTimes(3);
+  });
+
   test('does not inject unrelated history, facts, preferences, or creator opinions into a new product topic', () => {
     const session = createSession();
     session.currentTopic = '跑步耳机掉落问题';

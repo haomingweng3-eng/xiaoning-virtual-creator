@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createSessionId, getClientSessionId, sendChat as defaultSendChat, getSessionState as defaultGetSessionState } from './api.js';
+import { createConversation as defaultCreateConversation, createSessionId, deleteConversation as defaultDeleteConversation, getClientSessionId, listConversations as defaultListConversations, sendChat as defaultSendChat, getSessionState as defaultGetSessionState } from './api.js';
 
 const DEFAULT_CREATOR_CONFIG = {
   name: '小柠',
@@ -279,7 +279,7 @@ function TypingIndicator() {
   return <div className="typing-row" aria-label="小柠正在想一会儿"><span /><span /><span /></div>;
 }
 
-export default function App({ sendChat = defaultSendChat, getSessionState = defaultGetSessionState }) {
+export default function App({ sendChat = defaultSendChat, getSessionState = defaultGetSessionState, listConversations = defaultListConversations, createConversation = defaultCreateConversation, deleteConversation = defaultDeleteConversation }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -288,14 +288,23 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   const [shelfProducts, setShelfProducts] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sessionId, setSessionId] = useState(() => getClientSessionId());
+  const [conversations, setConversations] = useState([]);
   const revealTimer = useRef(null);
   const thinkingTimer = useRef(null);
 
   useEffect(() => {
     let active = true;
-    getSessionState(sessionId).then((nextSession) => { if (active) setSession(nextSession); }).catch(() => { if (active) setSession({ recentTopics: [], currentTopic: null, creatorConfig: DEFAULT_CREATOR_CONFIG }); });
+    getSessionState(sessionId).then((nextSession) => {
+      if (!active) return;
+      setSession(nextSession);
+      const restored = Array.isArray(nextSession.history) ? nextSession.history : [];
+      setMessages(restored.map((turn, index) => turn.role === 'user'
+        ? { role: 'user', text: turn.content, id: `restored-user-${index}` }
+        : { role: 'assistant', segments: normalizeSegments({ reply: turn.content }), products: [], id: `restored-assistant-${index}` }));
+    }).catch(() => { if (active) setSession({ recentTopics: [], currentTopic: null, history: [], creatorConfig: DEFAULT_CREATOR_CONFIG }); });
+    listConversations().then((items) => { if (active) setConversations(items); }).catch(() => {});
     return () => { active = false; };
-  }, [getSessionState, sessionId]);
+  }, [getSessionState, listConversations, sessionId]);
 
   useEffect(() => {
     return () => {
@@ -307,11 +316,11 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   function startNewConversation() {
     if (revealTimer.current) window.clearTimeout(revealTimer.current);
     if (thinkingTimer.current) window.clearTimeout(thinkingTimer.current);
-    const nextSessionId = createSessionId();
-    try { window.sessionStorage.setItem('xiaoning.sessionId', nextSessionId); } catch {
-      // The new id still isolates this in-memory client session.
-    }
-    setSessionId(nextSessionId);
+    createConversation().then((created) => {
+      setSessionId(created.conversationId);
+      setSession(created);
+      setConversations((current) => [{ conversationId: created.conversationId, title: '新对话', messageCount: 0, updatedAt: created.updatedAt }, ...current]);
+    }).catch(() => setSessionId(createSessionId()));
     setSession(null);
     setMessages([]);
     setInput('');
@@ -319,6 +328,12 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     setStageState(null);
     setShelfProducts([]);
     setHistoryOpen(false);
+  }
+
+  async function removeConversation(conversationId) {
+    await deleteConversation(conversationId);
+    setConversations((current) => current.filter((item) => item.conversationId !== conversationId));
+    if (conversationId === sessionId) startNewConversation();
   }
 
   async function submitMessage(rawMessage) {
@@ -369,6 +384,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     <main className={`creator-app ${messages.length ? 'has-conversation' : ''}`} data-testid="livestream-room">
       <div className="room-shell">
         <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} />
+        {conversations.length > 0 && <nav className="conversation-list" aria-label="会话列表"><span>我的对话</span>{conversations.slice(0, 8).map((item) => <div key={item.conversationId} className={item.conversationId === sessionId ? 'conversation-item is-active' : 'conversation-item'}><button type="button" onClick={() => setSessionId(item.conversationId)}>{item.title || '新对话'} <small>{item.messageCount || 0}</small></button><button type="button" aria-label={`删除${item.title || '对话'}`} onClick={() => removeConversation(item.conversationId)}>×</button></div>)}</nav>}
         <AvatarStage creatorName={creator.name} mode={configuredMode} mood={configuredMood} status={status} topic={topic} media={media} fallbackImage={avatar.fallbackImage} modeObjectPosition={avatar.modeObjectPosition} recentInteractions={recentInteractions} currentPick={stageState?.currentPick || null} onOpenHistory={() => setHistoryOpen(true)} />
         {!messages.length && <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
         {messages.length > 0 && loading && <TypingIndicator />}

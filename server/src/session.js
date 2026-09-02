@@ -7,15 +7,21 @@ const PREFERENCE_KEYS = ['budget', 'style', 'scene', 'brand'];
 const MAX_FACTS = 8;
 const MAX_TOPICS = 8;
 
-export function createSession() {
+export function createSession({ visitorId = null, conversationId = null, createdAt = new Date().toISOString() } = {}) {
   const openingMessage = OPENING_MESSAGES[Math.floor(Math.random() * OPENING_MESSAGES.length)];
   return {
+    visitorId,
+    conversationId,
+    createdAt,
+    updatedAt: createdAt,
     history: [],
     userPreferences: {},
     pendingProduct: null,
     userFacts: [],
     recentTopics: [],
     currentTopic: null,
+    conversationFlow: 'CONTINUE',
+    topicTurnCount: 0,
     openingMessage,
     todayNote: CREATOR_CONTENT[Math.floor(Math.random() * CREATOR_CONTENT.length)],
     creatorContent: CREATOR_CONTENT,

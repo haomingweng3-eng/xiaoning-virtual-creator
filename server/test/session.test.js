@@ -8,6 +8,8 @@ describe('session memory', () => {
     expect(session.intimacy).toBeUndefined();
     expect(session.userFacts).toEqual([]);
     expect(session.recentTopics).toEqual([]);
+    expect(session.conversationFlow).toBe('CONTINUE');
+    expect(session.topicTurnCount).toBe(0);
     expect(session.creatorConfig.avatarStage.media).toEqual({ type: 'image', src: '/assets/xiaoning-main.png' });
     expect(session.creatorConfig.avatarStage.fallbackImage).toBe('/assets/xiaoning-main.png');
     expect(JSON.stringify(session.creatorConfig)).not.toMatch(/avatar-main\.mp4|creator-host\.png/);

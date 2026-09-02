@@ -11,6 +11,7 @@
     "test": "npm run test --prefix server && npm run test --prefix client",
     "build": "npm run build --prefix client",
     "qa:golden": "node scripts/golden-conversation.mjs",
+    "qa:naturalness": "node scripts/naturalness-qa.mjs",
     "qa:visual": "node scripts/visual-qa.mjs",
     "start": "npm run start --prefix server"
   },

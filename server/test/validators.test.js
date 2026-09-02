@@ -30,7 +30,43 @@ describe('validateReply', () => {
     expect(validateReply({ reply, searchCalled: true }).valid).toBe(false);
   });
 
+  test('blocks an invented personal purchase phrased as a recent choice', () => {
+    expect(validateReply({ reply: '我自己后来买了 AirPods，通勤听播客很方便。' }).valid).toBe(false);
+  });
+
+  test('blocks repeating the immediately previous creator reply', () => {
+    expect(validateReply({
+      reply: '这个我先不急着替你下结论，慢慢聊就好。',
+      previousReply: '这个我先不急着替你下结论，慢慢聊就好。',
+    })).toEqual({ valid: false, reasons: ['duplicate-previous-reply'] });
+  });
+
   test('allows a short natural companion response', () => {
     expect(validateReply({ reply: '听起来今天真的挺累的，先缓一缓呀。', searchCalled: false }).valid).toBe(true);
+  });
+
+  test('blocks another question when the recent replies already form an interview streak', () => {
+    expect(validateReply({ reply: '那你现在是什么感觉？', disallowQuestion: true })).toEqual({
+      valid: false,
+      reasons: ['interview-question-streak'],
+    });
+  });
+
+  test('allows a concise independent opinion without forced agreement', () => {
+    expect(validateReply({ reply: 'AirPods 是方便，但如果跑步容易松，我不会只因为它热门就选它。' }).valid).toBe(true);
+  });
+
+  test('blocks leaked writing instructions from creator-facing segments', () => {
+    expect(validateReply({ reply: '顺着外出用餐的话题，给一个具体建议，不刻意推选项。' })).toEqual({
+      valid: false,
+      reasons: ['leaked-meta-instruction'],
+    });
+  });
+
+  test('blocks multiple questions inside one natural reply', () => {
+    expect(validateReply({ reply: '你现在用哪台？用了多久了？', maxQuestions: 1 })).toEqual({
+      valid: false,
+      reasons: ['too-many-questions'],
+    });
   });
 });

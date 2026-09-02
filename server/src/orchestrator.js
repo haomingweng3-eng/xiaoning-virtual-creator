@@ -1,4 +1,8 @@
-import { analyzeConversation } from './conversationAnalysis.js';
+import {
+  analyzeConversation,
+  countConsecutiveAssistantQuestions,
+  topicsAreRelated,
+} from './conversationAnalysis.js';
 import { addRecentTopic, appendTurn, mergePreferences, mergeUserFacts } from './session.js';
 import { buildMessages, CREATOR_REPLY_TOOL, FORCE_COMPANION } from './prompts.js';
 import { validateReply } from './validators.js';
@@ -47,12 +51,21 @@ function buildProductIntent(message, analysis, session) {
   };
 }
 
+function buildProductEvidenceLines(products) {
+  return products.flatMap((product) => (product.productInsights?.sellingPoints || [])
+    .filter((point) => point?.evidence)
+    .map((point) => `${product.title}：${point.evidence}`))
+    .slice(0, 3);
+}
+
 async function generateCreatorReply({ complete, session, message, analysis, products = [] }) {
-  const extra = products.length
-    ? `系统已经找到 ${products.length} 个真实商品。不要在文字里复述标题、价格或链接，直接表达你的取舍，商品会单独显示。`
-    : '';
+  const previousReply = [...(session.history || [])].reverse().find((turn) => turn.role === 'assistant')?.content || '';
   const call = await complete({
-    messages: buildMessages(session, message, extra, analysis.interaction_mode),
+    messages: buildMessages(session, message, {
+      analysis,
+      productEvidence: buildProductEvidenceLines(products),
+      avoidReply: previousReply,
+    }),
     tools: [CREATOR_REPLY_TOOL],
     toolChoice: FORCE_COMPANION,
   });
@@ -67,6 +80,10 @@ async function generateCreatorReply({ complete, session, message, analysis, prod
     negativeEmotion: analysis.emotion_intensity >= 5 && ['sad', 'angry', 'anxious', 'tired'].includes(analysis.emotion),
     disallowProductDetails: products.length > 0,
     disallowCommerceSuggestions: analysis.interaction_mode !== 'CURATE',
+    disallowQuestion: countConsecutiveAssistantQuestions(session.history) >= 2
+      && analysis.interaction_mode !== 'ASK',
+    maxQuestions: 1,
+    previousReply,
   });
   return validation.valid ? { segments: safeSegments, reply, preferences_update: args.preferences_update || {} } : null;
 }
@@ -74,9 +91,14 @@ async function generateCreatorReply({ complete, session, message, analysis, prod
 export function createChatOrchestrator({ complete, search }) {
   return async function chat(message, session) {
     const { analysis } = await analyzeConversation({ complete, session, message });
+    const previousTopic = session.currentTopic;
     const mentionedCategory = findProductCategory(message);
     const currentTopic = mentionedCategory || String(analysis.topic || '').trim() || session.currentTopic || null;
     session.currentTopic = currentTopic;
+    session.topicTurnCount = previousTopic && topicsAreRelated(previousTopic, currentTopic)
+      ? Math.min(3, Number(session.topicTurnCount || 0) + 1)
+      : (currentTopic ? 1 : 0);
+    session.conversationFlow = analysis.conversation_flow;
     mergeUserFacts(session, analysis.explicit_facts, message);
     addRecentTopic(session, currentTopic);
 
@@ -87,7 +109,7 @@ export function createChatOrchestrator({ complete, search }) {
         const segments = [{ type: 'text', content: NO_TRUSTED_PRODUCT_REPLY }];
         appendTurn(session, message, NO_TRUSTED_PRODUCT_REPLY);
         session.pendingProduct = null;
-        return { interaction: 'CURATE', segments, reply: NO_TRUSTED_PRODUCT_REPLY, products: [], analysis };
+        return { interaction: 'CURATE', conversationFlow: analysis.conversation_flow, segments, reply: NO_TRUSTED_PRODUCT_REPLY, products: [], analysis };
       }
       products = rankInsightfulProducts(searchResult.products, {
         message,
@@ -99,7 +121,7 @@ export function createChatOrchestrator({ complete, search }) {
         const segments = [{ type: 'text', content: NO_TRUSTED_PRODUCT_REPLY }];
         appendTurn(session, message, NO_TRUSTED_PRODUCT_REPLY);
         session.pendingProduct = null;
-        return { interaction: 'CURATE', segments, reply: NO_TRUSTED_PRODUCT_REPLY, products: [], analysis };
+        return { interaction: 'CURATE', conversationFlow: analysis.conversation_flow, segments, reply: NO_TRUSTED_PRODUCT_REPLY, products: [], analysis };
       }
     }
 
@@ -124,7 +146,14 @@ export function createChatOrchestrator({ complete, search }) {
       // 记住明确说出的品类，但不因此触发搜索；下一轮仍需用户确认或满足 readiness 门槛。
       session.pendingProduct = mentionedCategory || findProductCategory(analysis.topic);
     }
-    return { interaction: analysis.interaction_mode, segments: creatorReply.segments, reply: creatorReply.reply, products, analysis };
+    return {
+      interaction: analysis.interaction_mode,
+      conversationFlow: analysis.conversation_flow,
+      segments: creatorReply.segments,
+      reply: creatorReply.reply,
+      products,
+      analysis,
+    };
   };
 }
 
@@ -134,6 +163,7 @@ export function getSessionState(session) {
     todayNote: session.todayNote,
     recentTopics: session.recentTopics,
     currentTopic: session.currentTopic || null,
+    conversationFlow: session.conversationFlow,
     creatorContent: session.creatorContent,
     creatorConfig: session.creatorConfig,
     hasGreeted: session.hasGreeted,
