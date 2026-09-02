@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-09-02T03:14:04.632Z",
+  "appUrl": "http://localhost:5173/",
+  "cases": [
+    {
+      "filename": "01-home.png",
+      "input": "首次进入产品",
+      "interaction_mode": null,
+      "emotion": null,
+      "currentTopic": null,
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    },
+    {
+      "filename": "02-emotional.png",
+      "input": "今天工作被领导说了一顿，挺烦的。",
+      "interaction_mode": "REACT",
+      "emotion": "frustrated",
+      "currentTopic": "工作压力",
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    },
+    {
+      "filename": "03-positive.png",
+      "input": "今天终于把项目做完了。",
+      "interaction_mode": "REACT",
+      "emotion": "relieved",
+      "currentTopic": "完成项目",
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    },
+    {
+      "filename": "04-normal-chat.png",
+      "input": "最近开始跑步。",
+      "interaction_mode": "SHARE",
+      "emotion": "neutral",
+      "currentTopic": "跑步",
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    },
+    {
+      "filename": "05-pre-commerce.png",
+      "input": "最近开始跑步。 → 跑步的时候耳机老掉。",
+      "interaction_mode": "SHARE",
+      "emotion": "4",
+      "currentTopic": "耳机",
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    },
+    {
+      "filename": "06-curate.png",
+      "input": "那你帮我看看有没有适合跑步的耳机。",
+      "interaction_mode": "CURATE",
+      "emotion": "neutral",
+      "currentTopic": "耳机",
+      "commerceCalled": true,
+      "provider": "shopify",
+      "productsCount": 2,
+      "status": "PASS"
+    },
+    {
+      "filename": "09-product-detail.png",
+      "input": "商品 evidence 展开",
+      "interaction_mode": "CURATE",
+      "emotion": "neutral",
+      "currentTopic": "耳机",
+      "commerceCalled": true,
+      "provider": "shopify",
+      "productsCount": 2,
+      "status": "PASS"
+    },
+    {
+      "filename": "07-topic-switch.png",
+      "input": "跑步 → 耳机 → iPhone → 工作 → 再回跑步",
+      "interaction_mode": "SHARE",
+      "emotion": "neutral",
+      "currentTopic": "跑步耳机",
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    },
+    {
+      "filename": "08-mobile.png",
+      "input": "390px normal conversation",
+      "interaction_mode": "SHARE",
+      "emotion": "neutral",
+      "currentTopic": "跑步",
+      "commerceCalled": false,
+      "provider": null,
+      "productsCount": 0,
+      "status": "PASS"
+    }
+  ]
+}

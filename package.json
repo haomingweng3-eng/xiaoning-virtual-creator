@@ -1,0 +1,21 @@
+{
+  "name": "xiaoning-virtual-creator-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c yellow,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "test": "npm run test --prefix server && npm run test --prefix client",
+    "build": "npm run build --prefix client",
+    "qa:golden": "node scripts/golden-conversation.mjs",
+    "qa:visual": "node scripts/visual-qa.mjs",
+    "start": "npm run start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "playwright": "^1.55.0"
+  }
+}
