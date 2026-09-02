@@ -137,15 +137,9 @@ export function AvatarStage({
   const statusCopy = status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : '正在聊';
 
   return (
-    <section
-      data-testid="avatar-stage"
-      data-stage-layout="creator-room"
-      className={`avatar-stage avatar-stage-mode-${mode} avatar-stage-mood-${mood} avatar-stage-status-${status}`}
-      aria-label={`${creatorName} 的直播间`}
-    >
+    <section data-testid="avatar-stage" data-stage-layout="creator-panel" className={`avatar-stage avatar-stage-mode-${mode} avatar-stage-mood-${mood} avatar-stage-status-${status}`} aria-label={`${creatorName} 的 IP 形象`}>
       <div className="avatar-stage-frame">
         <div className="stage-visual">
-          <div className="stage-visual-orbit" aria-hidden="true" />
           <img
             data-testid="avatar-fallback"
             className="avatar-media"
@@ -157,13 +151,12 @@ export function AvatarStage({
         </div>
         <div className="stage-content">
           <div className="stage-identity">
-            <span className="stage-identity-kicker">{mode === 'present' ? 'LIVE PICK' : 'XIAONING LIVE'}</span>
             <strong>{creatorName}</strong>
             <span>{MOOD_COPY[mood] || MOOD_COPY.neutral}{topic ? ` · ${topic}` : ''}</span>
           </div>
           {currentPick && mode === 'present' && (
             <div className="stage-current-pick">
-              <span>CURRENT PICK</span>
+              <span>当前推荐</span>
               <strong>{currentPick.title}</strong>
               {(currentPick.productInsights?.personalizedReason || currentPick.reason) && <p>{currentPick.productInsights?.personalizedReason || currentPick.reason}</p>}
             </div>
@@ -171,16 +164,16 @@ export function AvatarStage({
           {recentInteractions.length > 0 ? (
             <div className="stage-interactions" data-testid="stage-interactions">
               {recentInteractions.map((message, index) => (
-                <div className={`stage-interaction stage-interaction-${message.role}`} data-interaction key={`${message.role}-${message.id || index}`}>
+                <div className={`stage-interaction stage-interaction-${message.role}`} data-interaction aria-hidden="true" key={`${message.role}-${message.id || index}`}>
                   <span>{message.role === 'user' ? '你' : creatorName}</span>
-                  <p>{message.text}</p>
+                  <p data-text={message.text} />
                 </div>
               ))}
               <button type="button" className="history-trigger" aria-label="查看对话" onClick={onOpenHistory}>查看对话 ↗</button>
             </div>
           ) : (
             <div className="stage-opening">
-              <span>NOW TALKING</span>
+              <span>小柠在这里</span>
               <p>不急着找答案。<br />先说说你今天在想什么。</p>
             </div>
           )}
@@ -188,6 +181,35 @@ export function AvatarStage({
       </div>
     </section>
   );
+}
+
+function formatConversationTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const diff = Math.max(0, Date.now() - date.getTime());
+  if (diff < 60 * 60 * 1000) return '刚刚';
+  if (diff < 24 * 60 * 60 * 1000) return `${Math.floor(diff / (60 * 60 * 1000))}小时前`;
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function Sidebar({ conversations, activeId, memory, onSelect, onNew, onDelete, onOpenMemory }) {
+  return <aside className="app-sidebar" data-testid="app-sidebar">
+    <div className="sidebar-brand"><img src="/assets/xiaoning-main.png" alt="" /><div><strong>小柠 <span>✦</span></strong><small>生活方式虚拟创作者</small></div></div>
+    <button type="button" className="sidebar-new" onClick={onNew}>＋ <span>新对话</span></button>
+    <div className="sidebar-section"><div className="sidebar-section-heading"><span>最近对话</span><small>{conversations.length}</small></div><div className="sidebar-conversations">{conversations.map((item) => <div className={`sidebar-conversation ${item.conversationId === activeId ? 'is-active' : ''}`} key={item.conversationId}><button type="button" onClick={() => onSelect(item.conversationId)}><span className="conversation-icon">▢</span><span className="conversation-copy"><strong>{item.title || '新对话'}</strong><small>{formatConversationTime(item.updatedAt)}</small></span></button><button type="button" className="sidebar-delete" aria-label={`删除${item.title || '对话'}`} onClick={() => onDelete(item.conversationId)}>×</button></div>)}</div></div>
+    <div className="sidebar-memory"><button type="button" className="memory-heading" onClick={onOpenMemory}><span>♡</span><strong>小柠记住的</strong><span>›</span></button>{memory.slice(0, 3).map((item) => <div className="memory-preview" key={item.text}><span>{item.text}</span><b>{item.type}</b></div>)}{!memory.length && <p>还没有需要记住的事。</p>}</div>
+    <div className="sidebar-footer">小柠 · 陪你慢慢选</div>
+  </aside>;
+}
+
+function CreatorPanel({ creator, todayNote, avatar, configuredMode, configuredMood, status, topic, currentPick, recentInteractions, onOpenHistory, shelfProducts }) {
+  return <aside className="creator-panel" data-testid="creator-panel">
+    <div className="creator-panel-heading"><div><strong>{creator.name}</strong><small>生活方式虚拟创作者</small></div><span><i />在线</span></div>
+    <AvatarStage creatorName={creator.name} mode={configuredMode} mood={configuredMood} status={status} topic={topic} media={avatar.mediaByMode?.[configuredMode] || avatar.media} fallbackImage={avatar.fallbackImage} modeObjectPosition={avatar.modeObjectPosition} recentInteractions={recentInteractions} currentPick={currentPick} onOpenHistory={onOpenHistory} />
+    <div className="creator-note"><span>小柠的今日想法</span><p>{todayNote?.opinion || creator.signature || '专注当下，认真生活，也给自己一点小确幸。'}</p></div>
+    {shelfProducts.length > 0 && <div className="creator-mini-shelf"><span>小柠帮你挑</span>{shelfProducts.slice(0, 3).map((product) => <div className="creator-mini-product" key={product.productUrl || product.url}><strong>{product.title}</strong><small>{formatMoney(product.price, product.currency) || '查看实时价格'}</small></div>)}</div>}
+  </aside>;
 }
 
 function UserMessage({ message }) {
@@ -401,13 +423,17 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
 
   return (
     <main className={`creator-app ${messages.length ? 'has-conversation' : ''}`} data-testid="livestream-room">
-      <div className="room-shell">
-        <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} onOpenConversations={() => setManagementOpen('conversations')} onOpenMemory={() => setManagementOpen('memory')} />
-        <AvatarStage creatorName={creator.name} mode={configuredMode} mood={configuredMood} status={status} topic={topic} media={media} fallbackImage={avatar.fallbackImage} modeObjectPosition={avatar.modeObjectPosition} recentInteractions={recentInteractions} currentPick={stageState?.currentPick || null} onOpenHistory={() => setHistoryOpen(true)} />
-        {!messages.length && <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
-        {messages.length > 0 && loading && <TypingIndicator />}
-        <Composer input={input} setInput={setInput} onSubmit={submitMessage} loading={loading} status={status} />
-        <ProductShelf products={shelfProducts} topic={topic} />
+      <div className="app-shell">
+        <Sidebar conversations={conversations} activeId={conversationId} memory={memory} onSelect={(id) => setConversationId(id)} onNew={startNewConversation} onDelete={removeConversation} onOpenMemory={() => setManagementOpen('memory')} />
+        <section className="conversation-pane" data-testid="conversation-pane">
+          <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} onOpenConversations={() => setManagementOpen('conversations')} onOpenMemory={() => setManagementOpen('memory')} />
+          <div className="conversation-body">
+            <div className="conversation-heading"><div><span>CONVERSATION</span><h2>{session.title || topic || '和小柠聊聊'}</h2></div><div className="conversation-heading-actions"><span>{session.updatedAt ? formatConversationTime(session.updatedAt) : '刚刚'}</span><button type="button" aria-label="搜索">⌕</button><button type="button" aria-label="更多">•••</button></div></div>
+            {messages.length ? <div className="message-list">{messages.map((message, index) => message.role === 'user' ? <UserMessage key={`message-user-${index}`} message={message} /> : <CreatorMessage key={`message-creator-${index}`} message={message} creatorName={creator.name} />)}{loading && <TypingIndicator />}</div> : <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
+          </div>
+          <div className="conversation-compose"><Composer input={input} setInput={setInput} onSubmit={submitMessage} loading={loading} status={status} /><ProductShelf products={shelfProducts} topic={topic} /></div>
+        </section>
+        <CreatorPanel creator={creator} todayNote={session.todayNote} avatar={avatar} configuredMode={configuredMode} configuredMood={configuredMood} status={status} topic={topic} currentPick={stageState?.currentPick || null} recentInteractions={recentInteractions} onOpenHistory={() => setHistoryOpen(true)} shelfProducts={shelfProducts} />
       </div>
       {historyOpen && <HistoryDrawer messages={messages} creatorName={creator.name} onClose={() => setHistoryOpen(false)} />}
       {managementOpen === 'conversations' && <ConversationDrawer conversations={conversations} activeId={conversationId} onSelect={(id) => { setConversationId(id); setManagementOpen(null); }} onNew={startNewConversation} onDelete={removeConversation} onClose={() => setManagementOpen(null)} />}

@@ -26,6 +26,15 @@ const session = {
 };
 
 describe('Final Creator Home', () => {
+  test('uses a warm three-column companion workspace', async () => {
+    render(<App getSessionState={vi.fn().mockResolvedValue(session)} sendChat={vi.fn()} />);
+    expect(await screen.findByTestId('app-sidebar')).toBeInTheDocument();
+    expect(screen.getByTestId('conversation-pane')).toBeInTheDocument();
+    expect(screen.getByTestId('creator-panel')).toBeInTheDocument();
+    expect(screen.queryByText('LIVE ROOM')).not.toBeInTheDocument();
+    expect(screen.queryByText('XIAONING LIVE')).not.toBeInTheDocument();
+  });
+
   test('uses the active topic instead of a stale recent topic and sends the session id', async () => {
     const activeSession = { ...session, sessionId: 'session-b', currentTopic: 'iPhone 17', recentTopics: ['跑步耳机掉落问题'] };
     const getSessionState = vi.fn().mockResolvedValue(activeSession);
@@ -83,7 +92,8 @@ describe('Final Creator Home', () => {
     expect(screen.getByText('正在聊 · 跑步')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '最近有点累' })).toBeInTheDocument();
     expect(screen.queryByText('NOT A SHOPPING LIST')).not.toBeInTheDocument();
-    expect(screen.queryByText(/AI|助手|在线/)).not.toBeInTheDocument();
+    expect(screen.getByText('在线')).toBeInTheDocument();
+    expect(screen.queryByText(/AI|助手/)).not.toBeInTheDocument();
   });
 
   test('keeps only the latest four interactions on stage and exposes the full history in a drawer', async () => {
