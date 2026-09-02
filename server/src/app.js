@@ -6,7 +6,7 @@ import { createSession } from './session.js';
 import { getSessionState } from './orchestrator.js';
 import { FileStore } from './fileStore.js';
 
-export function createApp({ chat, store = null, filePath = fileURLToPath(new URL('../data/conversations.json', import.meta.url)) } = {}) {
+export function createApp({ chat, store = null, filePath = null } = {}) {
   const app = express();
   const sessions = new Map();
   const fileStore = store || new FileStore(filePath);
@@ -71,10 +71,12 @@ export function createApp({ chat, store = null, filePath = fileURLToPath(new URL
     const visitorId = typeof request.body?.visitorId === 'string' ? request.body.visitorId.trim() : '';
     const { conversationId, session } = getSession(request.body?.conversationId || request.body?.sessionId, visitorId);
     if (!session.visitorId) session.visitorId = visitorId;
+    if (session.visitorId) session.userFacts = [...new Set([...(fileStore.getMemory(session.visitorId) || []), ...(session.userFacts || [])])];
     try {
       const result = await chat(message, session);
       session.hasGreeted = true;
       persist(conversationId, session);
+      fileStore.saveMemory(session.visitorId, session.userFacts);
       return response.json({
         sessionId: conversationId,
         conversationId,
@@ -87,9 +89,17 @@ export function createApp({ chat, store = null, filePath = fileURLToPath(new URL
         currentTopic: session.currentTopic,
         analysis: {
           interaction_mode: result.analysis?.interaction_mode,
+          interaction: result.analysis?.interaction_mode,
           emotion: result.analysis?.emotion,
+          emotion_intensity: result.analysis?.emotion_intensity,
+          user_need: result.analysis?.user_need,
           shopping_intent: result.analysis?.shopping_intent,
           topic: session.currentTopic || result.analysis?.topic,
+          product_category: result.analysis?.product_category,
+          requirements: result.analysis?.requirements || [],
+          budget: result.analysis?.budget ?? null,
+          occasion: result.analysis?.occasion ?? null,
+          recommendation_readiness: result.analysis?.recommendation_readiness ?? 0,
         },
       });
     } catch (err) {

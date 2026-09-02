@@ -115,16 +115,18 @@ export const ANALYZE_TOOL = {
         emotion_intensity: { type: 'number', description: '情绪强度 0-10' },
         user_need: { type: 'string', description: '用户当前真正需要什么，如 emotional_support/advice/information/recommendation/just_chatting' },
         topic: { type: 'string', description: '当前话题关键词' },
+        product_category: { type: ['string', 'null'], description: '当前商品品类，没有则为 null' },
+        budget: { type: ['number', 'string', 'object', 'null'], description: '用户明确给出的预算，没有则为 null' },
         conversation_goal: { type: 'string', description: '用户这轮对话想达成什么' },
         shopping_intent: { type: 'string', enum: ['none', 'latent', 'implicit', 'explicit'], description: '购物意图：none无/latent潜在/implicit隐含/explicit明确' },
         occasion: { type: 'string', description: '场景/场合，如 work/date/party/daily/gift，没有则为 null' },
         requirements: { type: 'array', items: { type: 'string' }, description: '用户明确提到的需求/要求列表' },
         recommendation_readiness: { type: 'number', description: '推荐时机成熟度 0-1。低于 0.65 时不要进入 CURATE。' },
         explicit_facts: { type: 'array', items: { type: 'string' }, description: '只记录用户原话中明确表达的事实，不要推断关系、情绪原因或对方想法' },
-        interaction_mode: { type: 'string', enum: ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'], description: '应该使用的交互模式' },
+        interaction: { type: 'string', enum: ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'], description: '应该使用的交互模式' },
         conversation_flow: { type: 'string', enum: ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'], description: '这一轮对话如何推进' },
       },
-      required: ['emotion', 'emotion_intensity', 'user_need', 'topic', 'conversation_goal', 'shopping_intent', 'occasion', 'requirements', 'recommendation_readiness', 'explicit_facts', 'interaction_mode', 'conversation_flow'],
+      required: ['emotion', 'emotion_intensity', 'user_need', 'topic', 'product_category', 'requirements', 'budget', 'occasion', 'recommendation_readiness', 'explicit_facts', 'interaction', 'conversation_flow'],
     },
   },
 };
@@ -268,7 +270,7 @@ export function buildMessages(session, userMessage, options = {}, legacyResponse
 export function buildAnalysisMessages(session, userMessage) {
   const context = selectRelevantContext(session, userMessage);
   const memories = compactMemories(context);
-  const systemContent = `你只负责把当前用户消息分析成工具要求的结构化字段，不写回复。识别当前情绪、真实需求、话题、购物意图和推荐成熟度；topic 描述此刻正在谈什么，用户明显转场时立即采用新话题。interaction_mode 从 REACT、SHARE、ASK、CALLBACK、CURATE 中选择；conversation_flow 从 CONTINUE、EXPAND、SHARE、SHIFT、CALLBACK 中选择。explicit_facts 只能摘录用户原话明确表达的事实。recommendation_readiness 使用 0–1。${memories.length ? `\n相关上下文：${memories.join('；')}` : ''}`;
+  const systemContent = `你只负责把当前用户消息分析成工具要求的结构化字段，不写回复。user_need 只能用 vent、comfort、celebrate、advice、casual_chat、opinion；topic 描述此刻正在谈什么；shopping_intent 用 none、latent、implicit、explicit；interaction 用 REACT、SHARE、ASK、CALLBACK、CURATE；conversation_flow 用 CONTINUE、EXPAND、SHARE、SHIFT、CALLBACK。提取 product_category、requirements、budget、occasion 和 0–1 的 recommendation_readiness。explicit_facts 只能摘录用户原话明确表达的事实。${memories.length ? `\n相关上下文：${memories.join('；')}` : ''}`;
 
   return [
     { role: 'system', content: systemContent },

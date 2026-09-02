@@ -6,14 +6,20 @@ export class FileStore {
   constructor(filePath) {
     this.filePath = filePath;
     this.records = new Map();
+    this.memories = new Map();
     this.load();
   }
 
   load() {
+    if (!this.filePath) return;
     try {
       const parsed = JSON.parse(readFileSync(this.filePath, 'utf8'));
-      for (const record of Array.isArray(parsed) ? parsed : []) {
+      const records = Array.isArray(parsed) ? parsed : parsed?.conversations;
+      for (const record of Array.isArray(records) ? records : []) {
         if (record?.conversationId && record?.session) this.records.set(record.conversationId, record);
+      }
+      for (const [visitorId, facts] of Object.entries(Array.isArray(parsed) ? {} : (parsed?.memories || {}))) {
+        if (Array.isArray(facts)) this.memories.set(visitorId, facts);
       }
     } catch (error) {
       if (error.code !== 'ENOENT') console.warn(`FileStore load skipped: ${error.message}`);
@@ -23,15 +29,29 @@ export class FileStore {
   save(record) {
     if (!record?.conversationId) return;
     this.records.set(record.conversationId, record);
+    if (!this.filePath) return;
     mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify([...this.records.values()], null, 2));
+    this.flush();
+  }
+
+  saveMemory(visitorId, facts) {
+    if (!visitorId) return;
+    this.memories.set(visitorId, [...new Set((facts || []).map(String).filter(Boolean))].slice(-16));
+    this.flush();
+  }
+
+  getMemory(visitorId) { return [...(this.memories.get(visitorId) || [])]; }
+
+  flush() {
+    if (!this.filePath) return;
+    mkdirSync(dirname(this.filePath), { recursive: true });
+    writeFileSync(this.filePath, JSON.stringify({ conversations: [...this.records.values()], memories: Object.fromEntries(this.memories) }, null, 2));
   }
 
   delete(conversationId) {
     const removed = this.records.delete(conversationId);
     if (removed) {
-      mkdirSync(dirname(this.filePath), { recursive: true });
-      writeFileSync(this.filePath, JSON.stringify([...this.records.values()], null, 2));
+      this.flush();
     }
     return removed;
   }

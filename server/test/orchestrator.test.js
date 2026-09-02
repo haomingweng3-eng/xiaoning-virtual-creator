@@ -17,7 +17,7 @@ function analysisCall(overrides = {}) {
   return toolCall('analyze_conversation', {
     emotion: 'neutral', emotion_intensity: 0.2, user_need: 'just_chatting', topic: '',
     conversation_goal: 'chat', shopping_intent: 'none', occasion: null, requirements: [],
-    recommendation_readiness: 0, explicit_facts: [], interaction_mode: 'SHARE', ...overrides,
+    recommendation_readiness: 0, product_category: null, budget: null, explicit_facts: [], interaction_mode: 'SHARE', ...overrides,
   });
 }
 
@@ -28,6 +28,32 @@ function creatorCall(text, overrides = {}) {
 }
 
 describe('final interaction model', () => {
+  test('normalizes analysis contract fields for commerce and companion policy', async () => {
+    const complete = vi.fn().mockResolvedValueOnce(analysisCall({
+      emotion: 'frustrated', emotion_intensity: 8, user_need: 'vent', product_category: '耳机', budget: 500,
+      interaction: 'REACT', interaction_mode: undefined,
+    }));
+    const result = await (await import('../src/conversationAnalysis.js')).analyzeConversation({ complete, session: createSession(), message: '今天被老板说了一顿，挺烦的' });
+    expect(result.analysis.user_need).toBe('vent');
+    expect(result.analysis.product_category).toBe('耳机');
+    expect(result.analysis.budget).toBe(500);
+    expect(result.analysis.interaction_mode).toBe('REACT');
+    expect(result.analysis.shopping_intent).toBe('none');
+  });
+
+  test('implicit ready need only asks permission and does not curate', async () => {
+    const complete = vi.fn().mockResolvedValueOnce(analysisCall({
+      topic: '跑步耳机', product_category: '耳机', shopping_intent: 'implicit', recommendation_readiness: 0.8,
+      interaction_mode: 'CURATE', conversation_flow: 'CONTINUE',
+    })).mockResolvedValueOnce(creatorCall('这种我可以帮你挑几个，要不要看？'));
+    const search = vi.fn();
+    const session = createSession();
+    session.pendingProduct = '耳机';
+    const result = await createChatOrchestrator({ complete, search })('跑步的时候耳机老掉，我想解决这个问题', session);
+    expect(result.interaction).toBe('ASK');
+    expect(result.products).toEqual([]);
+    expect(search).not.toHaveBeenCalled();
+  });
   test('keeps character and conversation style prompts within their Chinese character budgets', () => {
     const countChinese = (value) => (String(value).match(/[\u3400-\u9fff]/g) || []).length;
     expect(countChinese(CHARACTER_CORE)).toBeGreaterThanOrEqual(300);

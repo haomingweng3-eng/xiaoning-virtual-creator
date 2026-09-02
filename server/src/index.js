@@ -5,6 +5,7 @@ import { createChatOrchestrator } from './orchestrator.js';
 import { searchProducts } from './productSearch.js';
 import { searchShopifyCatalog } from './shopifyCatalog.js';
 import { searchWithFallback } from './productSearch.js';
+import { fileURLToPath } from 'node:url';
 
 dotenv.config({ path: new URL('../../.env', import.meta.url) });
 
@@ -34,6 +35,6 @@ const chat = createChatOrchestrator({
     tavilySearch: searchProducts,
   }),
 });
-createApp({ chat }).listen(port, () => {
+createApp({ chat, filePath: fileURLToPath(new URL('../data/conversations.json', import.meta.url)) }).listen(port, () => {
   console.log(`小柠后端运行在 http://localhost:${port}`);
 });

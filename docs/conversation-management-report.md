@@ -29,7 +29,7 @@
 }
 ```
 
-长期 Memory（`userFacts`、`userPreferences`）仍保存在 conversation session 内部，但与 `history` 字段分开；本轮没有扩大 Memory 管理入口范围。
+长期 Memory 现在在 FileStore 的 `memories[visitorId]` 中独立保存；Conversation 的 `history`、当前话题和 pendingProduct 仍独立保存。每轮仅由现有 relevance gating 召回相关事实。本轮没有扩大 Memory 管理入口范围。
 
 ## 3. FileStore 结构
 

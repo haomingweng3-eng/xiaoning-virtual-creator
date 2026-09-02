@@ -85,6 +85,9 @@ npm run qa:golden
 # 自然度与 Prompt 压缩验收（5 个真实场景，含 10 轮连续对话）
 npm run qa:naturalness
 
+# Emotional Companion + Intelligent Commerce 8 场景 Smoke QA
+npm run qa:companion-commerce
+
 # 首次运行 Visual QA 前安装 Chromium
 npx playwright install chromium
 npm run qa:visual
@@ -130,6 +133,7 @@ server/src/
 scripts/
   golden-conversation.mjs          # 10 个真实 Golden cases
   naturalness-qa.mjs               # 自然对话与话题切换验收
+  companion-commerce-qa.mjs        # Companion + Commerce 真实 Smoke QA
   visual-qa.mjs                    # 浏览器截图与 HTML 报告
 docs/
   final-report.md
@@ -137,6 +141,7 @@ docs/
 artifacts/visual-qa/
 artifacts/release-screenshots/       # 最终提交文档使用的 9 张截图
 artifacts/naturalness-qa/            # 真实自然度验收报告与 transcript
+artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 evidence
 ```
 
 ## 为什么不用重型 Live2D / 实时数字人
@@ -157,5 +162,6 @@ artifacts/naturalness-qa/            # 真实自然度验收报告与 transcript
 
 - [开发问题与解决方案](docs/final-report.md)
 - [Conversation Management 交付报告](docs/conversation-management-report.md)
+- [Companion + Commerce 交付报告](docs/companion-commerce-report.md)
 - [最终提交文档大纲](docs/delivery-outline.md)
 - [Visual QA 报告](artifacts/visual-qa/report.html)

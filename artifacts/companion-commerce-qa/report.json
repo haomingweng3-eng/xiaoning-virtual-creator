@@ -1,0 +1,495 @@
+{
+  "generatedAt": "2026-09-02T06:49:48.346Z",
+  "apiUrl": "http://localhost:3001/api/chat",
+  "cases": [
+    {
+      "name": "1 negative companion",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "今天被老板说了一顿，挺烦的。",
+          "assistant": "被说了一顿确实挺不舒服的，尤其是那种突然被叫住、当众或者当着别人的面讲的时候，心里会堵很久。\n\n不过说实话，老板说归说，真正要判断的是他说的有没有道理。如果确实有做得不到位的地方，那就当花几分钟听了个反馈，改掉就好；如果只是他情绪不好拿你出气，那更不值得往心里放。\n\n先让这件事过一夜，明天再看它还有多重。",
+          "interaction": "REACT",
+          "analysis": {
+            "interaction_mode": "REACT",
+            "interaction": "REACT",
+            "emotion": "sad",
+            "emotion_intensity": 6,
+            "user_need": "comfort",
+            "shopping_intent": "none",
+            "topic": "工作中被老板批评",
+            "product_category": null,
+            "requirements": [],
+            "budget": null,
+            "occasion": "work",
+            "recommendation_readiness": 0
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "2 celebration companion",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "今天项目终于做完了。",
+          "assistant": "恭喜啊，那种终于能合上电脑、不用再惦记的感觉，确实值得好好松一口气。\n\n今晚就别安排什么了，吃点好的，或者干脆什么都不做，让脑子空一空。项目收尾之后的空白感也很正常，不需要立刻填满它。",
+          "interaction": "REACT",
+          "analysis": {
+            "interaction_mode": "REACT",
+            "interaction": "REACT",
+            "emotion": "relieved",
+            "emotion_intensity": 6,
+            "user_need": "casual_chat",
+            "shopping_intent": "none",
+            "topic": "项目完成",
+            "product_category": null,
+            "requirements": [],
+            "budget": null,
+            "occasion": null,
+            "recommendation_readiness": 0.1
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "3 running no commerce",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "最近开始跑步。",
+          "assistant": "跑步这件事，刚开始最要紧的是别让身体先抗议。鞋子合不合脚比配不配装备重要多了，能舒服地出门跑起来，就已经赢了一半。\n\n你现在跑多远或者多久一次？其实不用一开始就定太满的目标，先让身体习惯这件事，节奏自然会出来。",
+          "interaction": "REACT",
+          "analysis": {
+            "interaction_mode": "REACT",
+            "interaction": "REACT",
+            "emotion": "neutral",
+            "emotion_intensity": 4,
+            "user_need": "casual_chat",
+            "shopping_intent": "none",
+            "topic": "开始跑步",
+            "product_category": "null",
+            "requirements": [],
+            "budget": null,
+            "occasion": "daily",
+            "recommendation_readiness": 0.3
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "4 implicit need waits",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "跑步的时候耳机老掉。",
+          "assistant": "这个真的挺烦的，跑着跑着还要腾出手去扶耳机，节奏全乱了。\n\n不过你刚开始跑，我倒觉得不用急着换装备。先看看是不是耳塞尺寸不合适——很多人默认用的中号，换小一号或者带鳍的耳塞，可能就稳很多。如果试过还是掉，再考虑挂耳式的也不迟。\n\n跑步初期，能让你少分心、愿意继续出门的事才值得做。装备是慢慢磨合出来的，不用一步到位。",
+          "interaction": "REACT",
+          "analysis": {
+            "interaction_mode": "REACT",
+            "interaction": "REACT",
+            "emotion": "frustrated",
+            "emotion_intensity": 4,
+            "user_need": "advice",
+            "shopping_intent": "none",
+            "topic": "耳机",
+            "product_category": "运动耳机",
+            "requirements": [
+              "跑步时不掉落的耳机"
+            ],
+            "budget": null,
+            "occasion": "running",
+            "recommendation_readiness": 0
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "5 explicit commerce",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "那你帮我看看适合跑步的耳机。",
+          "assistant": "如果确定要换的话，我建议优先看带耳挂或者带鳍固定的款式，稳定是第一位的。音质再好，跑两步就掉也没意义。\n\n另外你刚开始跑，也不用买太贵的。够用、戴着舒服、不折腾就行，等跑量上去了，你自然会知道自己更在意什么——是续航、降噪，还是轻便。\n\n页面里这两款都标了适合运动佩戴，其中 GO Sport+ 有 IP55 防水，出汗或者小雨都不太担心。你可以看看佩戴方式是不是你习惯的那种。",
+          "interaction": "CURATE",
+          "analysis": {
+            "interaction_mode": "CURATE",
+            "interaction": "CURATE",
+            "emotion": "neutral",
+            "emotion_intensity": 4,
+            "user_need": "casual_chat",
+            "shopping_intent": "explicit",
+            "topic": "耳机",
+            "product_category": "运动耳机",
+            "requirements": [
+              "跑步时不易掉落",
+              "适合跑步场景"
+            ],
+            "budget": null,
+            "occasion": "daily",
+            "recommendation_readiness": 1
+          },
+          "products": [
+            {
+              "id": "gid://shopify/p/2NGRfefriSvChhnlYuuPCt",
+              "title": "RunBuds™ Pro",
+              "description": "Wireless earbuds with secure fit, rich bass, and all-weather durability for runners and active users.",
+              "price": 83,
+              "currency": "USD",
+              "imageUrl": "https://cdn.shopify.com/s/files/1/0602/1804/8652/files/RunBuds_Pro_Studio_Photo_cbfd2203-e596-4041-a495-7dafabfeec83.png",
+              "merchant": null,
+              "productUrl": "https://runbuds.co.uk/products/runbuds-pro?variant=40597863727244&_gsid=fpa4XS6EWztB&utm_source=shopify&utm_medium=catalog",
+              "checkoutUrl": null,
+              "source": "shopify",
+              "productType": null,
+              "vendor": null,
+              "tags": [],
+              "options": [],
+              "variants": [
+                {
+                  "id": "gid://shopify/ProductVariant/40597863727244",
+                  "title": "RunBuds™ Pro",
+                  "available": true
+                }
+              ],
+              "metadata": {},
+              "productInsights": {
+                "productId": "gid://shopify/p/2NGRfefriSvChhnlYuuPCt",
+                "sellingPoints": [
+                  {
+                    "label": "稳固佩戴",
+                    "detail": "商品资料明确提到稳固、固定或耳挂式佩戴设计。",
+                    "evidence": "description: Wireless earbuds with secure fit, rich bass, and all-weather durability for runners and active users."
+                  }
+                ],
+                "suitableFor": [
+                  "跑步和运动时更在意佩戴稳定的人"
+                ],
+                "personalizedReason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+                "tradeoff": null,
+                "confidence": 0.66
+              },
+              "reason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+              "tradeoff": null
+            },
+            {
+              "id": "gid://shopify/p/32MB92ee4bM59lLlNpm2VQ",
+              "title": "GO Sport+ True Wireless Earbuds Graphite",
+              "description": "True wireless earbuds designed for active use, offering secure fit, IP55 protection, and reliable wireless audio.",
+              "price": 26.99,
+              "currency": "USD",
+              "imageUrl": "https://cdn.shopify.com/s/files/1/0240/9337/files/JLab-Go-AIr-Sport-True_Wireless-Sport-Earbuds-Graphite_d60b8660-b8bd-48cd-bafc-fa3dc927a826.jpg",
+              "merchant": null,
+              "productUrl": "https://www.jlab.com/products/go-sport-plus-earbuds-graphite?variant=40348615704648&_gsid=fpa4XS6EWztB&utm_source=shopify&utm_medium=catalog",
+              "checkoutUrl": null,
+              "source": "shopify",
+              "productType": null,
+              "vendor": null,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Color",
+                  "values": [
+                    {
+                      "label": "Coral"
+                    },
+                    {
+                      "label": "Graphite"
+                    },
+                    {
+                      "label": "Green"
+                    },
+                    {
+                      "label": "Light Blue"
+                    },
+                    {
+                      "label": "Sand"
+                    },
+                    {
+                      "label": "Teal"
+                    },
+                    {
+                      "label": "Yellow"
+                    }
+                  ]
+                }
+              ],
+              "variants": [
+                {
+                  "id": "gid://shopify/ProductVariant/40348615704648",
+                  "title": "GO Sport+ True Wireless Earbuds Graphite",
+                  "available": true
+                }
+              ],
+              "metadata": {},
+              "productInsights": {
+                "productId": "gid://shopify/p/32MB92ee4bM59lLlNpm2VQ",
+                "sellingPoints": [
+                  {
+                    "label": "稳固佩戴",
+                    "detail": "商品资料明确提到稳固、固定或耳挂式佩戴设计。",
+                    "evidence": "description: True wireless earbuds designed for active use, offering secure fit, IP55 protection, and reliable wireless audio."
+                  },
+                  {
+                    "label": "运动场景",
+                    "detail": "商品资料把跑步或运动列为明确使用场景。",
+                    "evidence": "title: GO Sport+ True Wireless Earbuds Graphite"
+                  },
+                  {
+                    "label": "可选规格",
+                    "detail": "商品资料列出了可选择的颜色、尺寸或容量规格。",
+                    "evidence": "options: Color: :"
+                  }
+                ],
+                "suitableFor": [
+                  "跑步和运动时更在意佩戴稳定的人",
+                  "跑步或日常运动",
+                  "希望比较具体规格的人"
+                ],
+                "personalizedReason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+                "tradeoff": null,
+                "confidence": 0.91
+              },
+              "reason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+              "tradeoff": null
+            },
+            {
+              "id": "gid://shopify/p/BOg1mjAkan2DskJ12h5Dj",
+              "title": "RunBuds™ Air",
+              "description": "Lightweight wireless earphones with secure fit and reliable performance for runners and gym-goers.",
+              "price": 56,
+              "currency": "USD",
+              "imageUrl": "https://cdn.shopify.com/s/files/1/0602/1804/8652/files/RunBuds_Air_-_Black_-_Fitness_Earphones_-_Transparent_Background.png",
+              "merchant": null,
+              "productUrl": "https://runbuds.co.uk/products/runbuds-air?variant=40597838823564&_gsid=fpa4XS6EWztB&utm_source=shopify&utm_medium=catalog",
+              "checkoutUrl": null,
+              "source": "shopify",
+              "productType": null,
+              "vendor": null,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Colour",
+                  "values": [
+                    {
+                      "label": "Black"
+                    },
+                    {
+                      "label": "Pink"
+                    }
+                  ]
+                }
+              ],
+              "variants": [
+                {
+                  "id": "gid://shopify/ProductVariant/40597838823564",
+                  "title": "RunBuds™ Air",
+                  "available": true
+                }
+              ],
+              "metadata": {},
+              "productInsights": {
+                "productId": "gid://shopify/p/BOg1mjAkan2DskJ12h5Dj",
+                "sellingPoints": [
+                  {
+                    "label": "稳固佩戴",
+                    "detail": "商品资料明确提到稳固、固定或耳挂式佩戴设计。",
+                    "evidence": "description: Lightweight wireless earphones with secure fit and reliable performance for runners and gym-goers."
+                  },
+                  {
+                    "label": "轻量取向",
+                    "detail": "商品资料明确使用轻量或轻盈描述。",
+                    "evidence": "description: Lightweight wireless earphones with secure fit and reliable performance for runners and gym-goers."
+                  }
+                ],
+                "suitableFor": [
+                  "跑步和运动时更在意佩戴稳定的人",
+                  "在意长时间佩戴负担的人"
+                ],
+                "personalizedReason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+                "tradeoff": null,
+                "confidence": 0.79
+              },
+              "reason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+              "tradeoff": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6 commerce cancel",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "算了，最近还是省点钱。",
+          "assistant": "那挺好，省下的钱留着，比急着换耳机踏实。\n\n反正跑步这事，装备可以慢慢来。等哪天你觉得老掉真的影响跑了，再选也不迟。其实现在这副，换个耳塞尺寸或者戴法，说不定还能再撑一阵。\n\n先跑起来，比什么都强。",
+          "interaction": "REACT",
+          "analysis": {
+            "interaction_mode": "REACT",
+            "interaction": "REACT",
+            "emotion": "neutral",
+            "emotion_intensity": 3,
+            "user_need": "casual_chat",
+            "shopping_intent": "none",
+            "topic": "省钱/消费节制",
+            "product_category": null,
+            "requirements": [],
+            "budget": null,
+            "occasion": null,
+            "recommendation_readiness": 0
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "7 independent opinion",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "我觉得这个 Sony 挺好的，你怎么看？",
+          "assistant": "这个我先不急着替你下结论，慢慢聊就好。",
+          "interaction": "SHARE",
+          "analysis": {
+            "interaction_mode": "SHARE",
+            "interaction": "SHARE",
+            "emotion": "neutral",
+            "emotion_intensity": 4,
+            "user_need": "opinion",
+            "shopping_intent": "none",
+            "topic": "Sony 产品评价",
+            "product_category": "Sony",
+            "requirements": [],
+            "budget": null,
+            "occasion": null,
+            "recommendation_readiness": 0.3
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "8 cross-conversation relevant memory",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "我不喜欢入耳式耳机。",
+          "assistant": "这个我倒挺能理解的。入耳式戴久了耳道闷，有些人还会胀痛，不是每个人都受得了那种封闭感。\n\n你平时是用半入耳多一些，还是干脆用头戴或者开放式那种？这个会影响我接下来能聊的方向。",
+          "interaction": "ASK",
+          "analysis": {
+            "interaction_mode": "ASK",
+            "interaction": "ASK",
+            "emotion": "neutral",
+            "emotion_intensity": 3,
+            "user_need": "casual_chat",
+            "shopping_intent": "none",
+            "topic": "耳机",
+            "product_category": "耳机",
+            "requirements": [
+              "不喜欢入耳式耳机"
+            ],
+            "budget": null,
+            "occasion": "null",
+            "recommendation_readiness": 0.45
+          },
+          "products": []
+        }
+      ]
+    },
+    {
+      "name": "8b new conversation callback",
+      "status": "PASS",
+      "turns": [
+        {
+          "user": "想买跑步耳机。",
+          "assistant": "跑步耳机这个，先问一句——你是更在意戴得稳不掉，还是更在意听诊器效应（就是线或耳塞摩擦的声音）？\n\n这两个方向会导向完全不同的选择，知道你的优先项再聊会比较有数。",
+          "interaction": "ASK",
+          "analysis": {
+            "interaction_mode": "ASK",
+            "interaction": "ASK",
+            "emotion": "neutral",
+            "emotion_intensity": 4,
+            "user_need": "casual_chat",
+            "shopping_intent": "none",
+            "topic": "耳机",
+            "product_category": "运动耳机",
+            "requirements": [
+              "跑步使用"
+            ],
+            "budget": null,
+            "occasion": "running",
+            "recommendation_readiness": 0.5
+          },
+          "products": []
+        }
+      ]
+    }
+  ],
+  "productEvidence": [
+    {
+      "title": "RunBuds™ Pro",
+      "merchant": null,
+      "price": 83,
+      "currency": "USD",
+      "sellingPoints": [
+        {
+          "label": "稳固佩戴",
+          "detail": "商品资料明确提到稳固、固定或耳挂式佩戴设计。",
+          "evidence": "description: Wireless earbuds with secure fit, rich bass, and all-weather durability for runners and active users."
+        }
+      ],
+      "personalizedReason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+      "tradeoff": null
+    },
+    {
+      "title": "GO Sport+ True Wireless Earbuds Graphite",
+      "merchant": null,
+      "price": 26.99,
+      "currency": "USD",
+      "sellingPoints": [
+        {
+          "label": "稳固佩戴",
+          "detail": "商品资料明确提到稳固、固定或耳挂式佩戴设计。",
+          "evidence": "description: True wireless earbuds designed for active use, offering secure fit, IP55 protection, and reliable wireless audio."
+        },
+        {
+          "label": "运动场景",
+          "detail": "商品资料把跑步或运动列为明确使用场景。",
+          "evidence": "title: GO Sport+ True Wireless Earbuds Graphite"
+        },
+        {
+          "label": "可选规格",
+          "detail": "商品资料列出了可选择的颜色、尺寸或容量规格。",
+          "evidence": "options: Color: :"
+        }
+      ],
+      "personalizedReason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+      "tradeoff": null
+    },
+    {
+      "title": "RunBuds™ Air",
+      "merchant": null,
+      "price": 56,
+      "currency": "USD",
+      "sellingPoints": [
+        {
+          "label": "稳固佩戴",
+          "detail": "商品资料明确提到稳固、固定或耳挂式佩戴设计。",
+          "evidence": "description: Lightweight wireless earphones with secure fit and reliable performance for runners and gym-goers."
+        },
+        {
+          "label": "轻量取向",
+          "detail": "商品资料明确使用轻量或轻盈描述。",
+          "evidence": "description: Lightweight wireless earphones with secure fit and reliable performance for runners and gym-goers."
+        }
+      ],
+      "personalizedReason": "你刚说跑动时最烦的是容易松，这款资料明确提到稳固或耳挂式佩戴，和当前需求直接相关。",
+      "tradeoff": null
+    }
+  ]
+}

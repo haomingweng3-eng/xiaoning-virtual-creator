@@ -6,7 +6,7 @@ import {
 import { addRecentTopic, appendTurn, mergePreferences, mergeUserFacts } from './session.js';
 import { buildMessages, CREATOR_REPLY_TOOL, FORCE_COMPANION } from './prompts.js';
 import { validateReply } from './validators.js';
-import { findProductCategory } from './intent.js';
+import { classifyMessageFallback, findProductCategory } from './intent.js';
 import { rankInsightfulProducts } from './productInsights.js';
 
 const NO_TRUSTED_PRODUCT_REPLY = '我刚看了一圈，但没找到足够靠谱的具体款，先不乱推给你。';
@@ -41,13 +41,16 @@ function sanitizeCreatorContent(content) {
 }
 
 function buildProductIntent(message, analysis, session) {
-  const category = findProductCategory(message) || findProductCategory(analysis.topic) || session.pendingProduct || analysis.topic || message;
+  const category = analysis.product_category || findProductCategory(message) || findProductCategory(analysis.topic) || session.pendingProduct || analysis.topic || message;
+  const budget = analysis.budget && typeof analysis.budget === 'object' ? analysis.budget : {};
   return {
-    query: [category, ...(analysis.requirements || [])].filter(Boolean).join(' '),
+    query: [category, ...(analysis.requirements || []), analysis.occasion].filter(Boolean).join(' '),
     category,
     requirements: analysis.requirements || [],
-    max_price: analysis.max_price,
-    min_price: analysis.min_price,
+    budget: analysis.budget || null,
+    occasion: analysis.occasion || null,
+    max_price: analysis.max_price ?? budget.max_price,
+    min_price: analysis.min_price ?? budget.min_price,
   };
 }
 
@@ -56,6 +59,15 @@ function buildProductEvidenceLines(products) {
     .filter((point) => point?.evidence)
     .map((point) => `${product.title}：${point.evidence}`))
     .slice(0, 3);
+}
+
+function filterAgainstExplicitPreferences(products, session) {
+  const exclusions = (session.userFacts || [])
+    .filter((fact) => /不喜欢|不要|不想要|避开/.test(String(fact)) && /入耳|耳塞|有线/.test(String(fact)))
+    .map((fact) => /入耳|耳塞|有线/.exec(String(fact))?.[0])
+    .filter(Boolean);
+  if (!exclusions.length) return products;
+  return products.filter((product) => !exclusions.some((term) => new RegExp(term, 'i').test(`${product.title} ${product.description || ''}`)));
 }
 
 async function generateCreatorReply({ complete, session, message, analysis, products = [] }) {
@@ -91,6 +103,7 @@ async function generateCreatorReply({ complete, session, message, analysis, prod
 export function createChatOrchestrator({ complete, search }) {
   return async function chat(message, session) {
     const { analysis } = await analyzeConversation({ complete, session, message });
+    if (classifyMessageFallback(message).scene === 'commerce-exit') session.pendingProduct = null;
     const previousTopic = session.currentTopic;
     const mentionedCategory = findProductCategory(message);
     const currentTopic = mentionedCategory || String(analysis.topic || '').trim() || session.currentTopic || null;
@@ -111,7 +124,7 @@ export function createChatOrchestrator({ complete, search }) {
         session.pendingProduct = null;
         return { interaction: 'CURATE', conversationFlow: analysis.conversation_flow, segments, reply: NO_TRUSTED_PRODUCT_REPLY, products: [], analysis };
       }
-      products = rankInsightfulProducts(searchResult.products, {
+      products = rankInsightfulProducts(filterAgainstExplicitPreferences(searchResult.products, session), {
         message,
         topic: analysis.topic,
         requirements: analysis.requirements || [],

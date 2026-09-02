@@ -1,5 +1,5 @@
 import { ANALYZE_TOOL, FORCE_ANALYZE, buildAnalysisMessages } from './prompts.js';
-import { classifyMessageFallback } from './intent.js';
+import { classifyMessageFallback, findProductCategory } from './intent.js';
 
 const MODES = ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'];
 const FLOWS = ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'];
@@ -12,12 +12,15 @@ function parseToolCall(call, expectedName) {
 function normalizeAnalysis(raw) {
   const rawReadiness = Number(raw.recommendation_readiness);
   const recommendationReadiness = rawReadiness > 1 ? rawReadiness / 10 : rawReadiness;
-  const requestedMode = raw.interaction_mode || raw.response_mode;
+  const requestedMode = raw.interaction_mode || raw.interaction || raw.response_mode;
+  const validNeeds = ['vent', 'comfort', 'celebrate', 'advice', 'casual_chat', 'opinion'];
   return {
     emotion: String(raw.emotion || 'neutral'),
     emotion_intensity: Math.min(10, Math.max(0, Number(raw.emotion_intensity) || 0)),
-    user_need: String(raw.user_need || 'just_chatting'),
+    user_need: validNeeds.includes(raw.user_need) ? raw.user_need : 'casual_chat',
     topic: String(raw.topic || ''),
+    product_category: raw.product_category ? String(raw.product_category) : findProductCategory(raw.topic) || null,
+    budget: raw.budget === null || raw.budget === undefined || raw.budget === '' ? null : raw.budget,
     conversation_goal: String(raw.conversation_goal || ''),
     shopping_intent: ['none', 'latent', 'implicit', 'explicit'].includes(raw.shopping_intent) ? raw.shopping_intent : 'none',
     occasion: raw.occasion ? String(raw.occasion) : null,
@@ -81,7 +84,7 @@ export function applyConversationPolicy(analysis, message, context = {}) {
   const fallback = classifyMessageFallback(message, context);
   const next = { ...analysis };
   const negative = fallback.scene === 'negative'
-    || (next.emotion_intensity >= 0.5 && ['sad', 'angry', 'anxious', 'tired'].includes(next.emotion));
+    || (next.emotion_intensity >= 0.5 && ['sad', 'stress', 'stressed', 'frustrated', 'angry', 'anxious', 'tired'].includes(next.emotion));
   if (negative) return { ...next, interaction_mode: 'REACT', shopping_intent: 'none', recommendation_readiness: 0 };
   if (fallback.scene === 'commerce-exit') {
     return { ...next, interaction_mode: 'REACT', shopping_intent: 'none', recommendation_readiness: 0 };
@@ -96,7 +99,7 @@ export function applyConversationPolicy(analysis, message, context = {}) {
   const explicitRequest = fallback.scene === 'shopping';
   const hasKnownNeed = Boolean(context.pendingProduct);
   const explicitConfirmation = explicitRequest && hasKnownNeed;
-  const implicitReady = next.shopping_intent === 'implicit' && next.recommendation_readiness >= 0.65 && hasKnownNeed;
+  const implicitReady = next.shopping_intent === 'implicit' && next.recommendation_readiness >= 0.75 && hasKnownNeed;
 
   if (explicitRequest || explicitConfirmation) {
     return {
@@ -108,7 +111,7 @@ export function applyConversationPolicy(analysis, message, context = {}) {
     };
   }
   if (next.shopping_intent === 'implicit' && implicitReady) {
-    return { ...next, interaction_mode: 'CURATE', recommendation_readiness: Math.max(next.recommendation_readiness, 0.65) };
+    return { ...next, interaction_mode: 'ASK', recommendation_readiness: Math.max(next.recommendation_readiness, 0.75) };
   }
   if (next.shopping_intent !== 'none') return { ...next, interaction_mode: next.interaction_mode === 'ASK' ? 'ASK' : 'SHARE' };
   if (next.interaction_mode === 'CURATE') return { ...next, interaction_mode: 'SHARE' };
