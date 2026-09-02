@@ -16,6 +16,13 @@ describe('classifyMessage', () => {
     });
   });
 
+  test('treats looking at a named product category as a shopping request', () => {
+    expect(classifyMessage('我想看看华为手机')).toEqual({
+      scene: 'shopping',
+      allowSearch: true,
+    });
+  });
+
   test('wanting a product without asking for help stays weak intent', () => {
     expect(classifyMessage('最近想买个鼠标')).toEqual({
       scene: 'weak-shopping',
@@ -36,6 +43,14 @@ describe('classifyMessage', () => {
       scene: 'shopping',
       allowSearch: true,
       inheritedProduct: 'MacBook',
+    });
+  });
+
+  test('recognizes a casual direct recommendation request for the pending product', () => {
+    expect(classifyMessage('随便给我推荐几款', { pendingProduct: '手机' })).toEqual({
+      scene: 'shopping',
+      allowSearch: true,
+      inheritedProduct: '手机',
     });
   });
 

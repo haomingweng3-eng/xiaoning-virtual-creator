@@ -1,5 +1,5 @@
 import { ANALYZE_TOOL, FORCE_ANALYZE, buildAnalysisMessages } from './prompts.js';
-import { classifyMessageFallback, findProductCategory, hasCommerceFollowUpRequest, hasExplicitRecommendationRequest } from './intent.js';
+import { classifyMessageFallback, findProductCategory } from './intent.js';
 
 const MODES = ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'];
 const FLOWS = ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'];
@@ -26,6 +26,8 @@ function normalizeAnalysis(raw) {
     occasion: raw.occasion ? String(raw.occasion) : null,
     requirements: Array.isArray(raw.requirements) ? raw.requirements.map(String).filter(Boolean) : [],
     recommendation_readiness: Math.min(1, Math.max(0, Number.isFinite(recommendationReadiness) ? recommendationReadiness : 0)),
+    should_recommend: raw.should_recommend === true || raw.should_recommend === 'true',
+    recommendation_reason: String(raw.recommendation_reason || ''),
     explicit_facts: Array.isArray(raw.explicit_facts) ? raw.explicit_facts.map(String).filter(Boolean) : [],
     interaction_mode: MODES.includes(requestedMode) ? requestedMode : 'SHARE',
     conversation_flow: FLOWS.includes(raw.conversation_flow) ? raw.conversation_flow : 'CONTINUE',
@@ -105,17 +107,17 @@ export function applyConversationPolicy(analysis, message, context = {}) {
     return { ...next, interaction_mode: 'CALLBACK', shopping_intent: 'none', recommendation_readiness: 0 };
   }
 
-  const explicitRequest = fallback.scene === 'shopping';
-  const hasStoredNeed = Boolean(context.pendingProduct || findProductCategory(context.currentTopic));
+  const modelDecision = next.should_recommend === true;
   const hasKnownNeed = Boolean(
-    context.pendingProduct
+    next.product_category
+      || context.pendingProduct
       || findProductCategory(context.currentTopic)
       || findProductCategory(message),
   );
-  const explicitConfirmation = hasStoredNeed && hasExplicitRecommendationRequest(message);
+  const hasStoredNeed = Boolean(context.pendingProduct || findProductCategory(context.currentTopic));
   const implicitReady = next.shopping_intent === 'implicit' && next.recommendation_readiness >= 0.75 && hasStoredNeed;
 
-  if ((explicitRequest && hasKnownNeed) || explicitConfirmation || (hasCommerceFollowUpRequest(message) && hasKnownNeed)) {
+  if (modelDecision && hasKnownNeed) {
     return {
       ...next,
       shopping_intent: 'explicit',
@@ -123,6 +125,12 @@ export function applyConversationPolicy(analysis, message, context = {}) {
       recommendation_readiness: 1,
       topic: next.topic || context.pendingProduct || '',
     };
+  }
+  if (modelDecision && !hasKnownNeed) {
+    return { ...next, interaction_mode: next.interaction_mode === 'ASK' ? 'ASK' : 'SHARE' };
+  }
+  if (!modelDecision && next.interaction_mode === 'CURATE') {
+    return { ...next, interaction_mode: 'ASK' };
   }
   if (next.shopping_intent === 'implicit' && implicitReady) {
     return { ...next, interaction_mode: 'ASK', recommendation_readiness: Math.max(next.recommendation_readiness, 0.75) };
@@ -145,6 +153,8 @@ function fallbackToAnalysis(message, context = {}) {
     conversation_goal: isStrongShopping ? 'find_product' : 'chat',
     shopping_intent: isStrongShopping ? 'explicit' : isWeakShopping ? 'latent' : 'none',
     recommendation_readiness: isStrongShopping ? 1 : isWeakShopping ? 0.3 : 0,
+    should_recommend: isStrongShopping,
+    recommendation_reason: isStrongShopping ? 'LLM 不可用时的规则兜底判断' : '',
     explicit_facts: [],
     interaction_mode: hasNegative ? 'REACT' : isStrongShopping ? 'CURATE' : 'SHARE',
     conversation_flow: 'SHARE',

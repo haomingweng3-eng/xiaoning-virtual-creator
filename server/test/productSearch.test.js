@@ -20,6 +20,15 @@ describe('Tavily Product Rendering Gate', () => {
     expect(product.metadata).toEqual(expect.objectContaining({ sourceExcerpt: '精选' }));
   });
 
+  test('normalizes explicit Tavily title and option specifications', () => {
+    const [product] = cleanShoppingResults({ results: [{
+      title: 'Xiaomi 17 Pro Max Chinese Version', url: 'https://shop.example/product/xiaomi-17-pro-max',
+      vendor: 'Xiaomi', options: [{ name: 'Storage', values: ['256GB', '512GB'] }], content: '¥4999',
+    }] });
+    expect(product).toMatchObject({ brand: 'Xiaomi', model: '17 Pro Max', variantLabel: 'Chinese Version' });
+    expect(product.specifications).toEqual(expect.arrayContaining([{ label: '存储容量', value: '256GB / 512GB', evidence: 'provider.options.Storage' }]));
+  });
+
   test('never returns more than three trusted results', () => {
     const results = cleanShoppingResults({ results: [1, 2, 3, 4].map((id) => ({
       title: `商品${id}`, url: `https://shop.example/product/${id}`, content: '¥10',

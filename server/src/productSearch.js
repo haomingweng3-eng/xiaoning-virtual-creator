@@ -9,6 +9,7 @@ const DETAIL_HINTS = [
   /\/item(?:\/|\.|$)/i, /\/product(?:\/|\.|$)/i, /\/goods(?:\/|\.|$)/i,
   /\/detail(?:\/|\.|$)/i, /[?&](?:id|sku|itemId)=/i,
 ];
+import { normalizeProductSpecifications } from './productSpecifications.js';
 
 function isHttpUrl(value) {
   try {
@@ -69,7 +70,7 @@ function normalizeProduct(result) {
   const title = String(result?.title || '').trim();
   if (!title || !productUrl || looksLikeContentPage(title, productUrl) || !looksLikeProductDetail(productUrl)) return null;
   const imageUrl = String(result?.image || result?.thumbnail || result?.image_url || '').trim();
-  return {
+  const normalized = {
     id: String(result?.id || productUrl),
     title,
     description: cleanDescription(result?.content || result?.snippet || result?.raw_content),
@@ -89,6 +90,7 @@ function normalizeProduct(result) {
       sourceExcerpt: cleanDescription(result?.raw_content || result?.content || result?.snippet),
     },
   };
+  return { ...normalized, ...normalizeProductSpecifications(normalized) };
 }
 
 export function cleanShoppingResults(payload, limits = {}) {

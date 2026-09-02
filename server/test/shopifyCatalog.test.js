@@ -44,7 +44,34 @@ describe('Shopify Global Catalog provider', () => {
       tags: ['running', 'open-ear'],
       options: [{ name: 'Color', values: ['Black', 'Sage'] }],
       variants: [expect.objectContaining({ id: 'gid://shopify/ProductVariant/1', available: true })],
+      brand: 'AeroRun',
+      model: 'Lightweight Running Headphones',
+      variantLabel: null,
+      specifications: [{ label: '颜色', value: 'Black / Sage', evidence: 'provider.options.Color' }],
     })]);
+  });
+
+  test('extracts model and version from provider titles without inventing device specs', () => {
+    const products = normalizeShopifyProducts({ products: [
+      { id: 'xiaomi-17-pro-max', title: 'Xiaomi 17 Pro Max Chinese Version', productUrl: 'https://example.com/xiaomi', variants: [{ id: 'xiaomi-v1' }] },
+      { id: 'iphone-17', title: 'iPhone 17 (Unlocked)', productUrl: 'https://example.com/iphone', variants: [{ id: 'iphone-v1' }] },
+    ] });
+    expect(products[0]).toEqual(expect.objectContaining({ brand: 'Xiaomi', model: '17 Pro Max', variantLabel: 'Chinese Version', specifications: [{ label: '版本', value: 'Chinese Version', evidence: 'provider.title' }] }));
+    expect(products[1]).toEqual(expect.objectContaining({ brand: 'Apple', model: 'iPhone 17', variantLabel: 'Unlocked', specifications: [{ label: '版本', value: 'Unlocked', evidence: 'provider.title' }] }));
+    expect(JSON.stringify(products)).not.toMatch(/128GB|256GB|黑色|5G|A19/);
+  });
+
+  test('prefers a concrete selected variant over all option values', () => {
+    const [product] = normalizeShopifyProducts({ products: [{
+      id: 'iphone-options', title: 'iPhone 17', productUrl: 'https://example.com/iphone-options',
+      options: [{ name: 'Storage', values: ['128GB', '256GB', '512GB'] }, { name: 'Color', values: ['Black', 'Silver'] }],
+      variants: [{ id: 'variant-256-black', title: '256GB / Black', selectedOptions: [{ name: 'Storage', value: '256GB' }, { name: 'Color', value: 'Black' }] }],
+    }] });
+    expect(product.variantLabel).toBe('256GB · Black');
+    expect(product.specifications).toEqual([
+      { label: '存储容量', value: '256GB', evidence: 'provider.variants[0].selectedOptions.Storage' },
+      { label: '颜色', value: 'Black', evidence: 'provider.variants[0].selectedOptions.Color' },
+    ]);
   });
 
   test('calls tools/call with an agent profile and catalog search arguments', async () => {

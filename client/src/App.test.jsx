@@ -35,6 +35,42 @@ describe('Final Creator Home', () => {
     expect(screen.queryByText('XIAONING LIVE')).not.toBeInTheDocument();
   });
 
+  test('exposes the three-column product responsibilities in the rendered hierarchy', async () => {
+    render(
+      <App
+        getSessionState={vi.fn().mockResolvedValue(session)}
+        listConversations={vi.fn().mockResolvedValue([{ conversationId: 'current', title: '想买跑步耳机', updatedAt: new Date().toISOString() }])}
+        getMemory={vi.fn().mockResolvedValue([{ type: '偏好', text: '不喜欢入耳式耳机' }])}
+        sendChat={vi.fn().mockResolvedValue({
+          interaction: 'CURATE',
+          segments: [{ type: 'text', content: '我先按你的需求挑几款。' }],
+          products: [{
+            id: 'p-layout', title: 'iPhone 17 (Unlocked)', brand: 'Apple', model: 'iPhone 17', variantLabel: 'Unlocked',
+            price: 999.99, currency: 'USD', imageUrl: null, merchant: 'Example Shop', productUrl: 'https://shop.example/p-layout', source: 'shopify',
+            specifications: [{ label: '容量', value: '256GB', evidence: 'provider.variants[0].selectedOptions.Storage' }],
+            productInsights: {
+              sellingPoints: [{ label: '续航', detail: '商品资料明确提供续航信息。', evidence: 'description: 24 hours.' }],
+              personalizedReason: '你刚才在意日常使用，这款资料给出了明确配置。',
+            },
+          }],
+        })}
+      />,
+    );
+
+    expect(await screen.findByTestId('livestream-room')).toHaveAttribute('data-layout', 'three-column');
+    expect(screen.getByTestId('app-sidebar')).toHaveTextContent('最近对话');
+    expect(screen.getByTestId('app-sidebar')).toHaveTextContent('小柠记住的');
+    expect(screen.getByRole('button', { name: '搜索对话' })).toBeInTheDocument();
+
+    await userEvent.setup().type(screen.getByPlaceholderText('和小柠说点什么…'), '我要手机');
+    await screen.getByRole('button', { name: '发送' }).click();
+    const shelf = await screen.findByRole('region', { name: '小柠帮你挑' });
+    expect(shelf.querySelector('.product-identity')).toBeInTheDocument();
+    expect(shelf.querySelector('.product-specifications')).toBeInTheDocument();
+    expect(shelf.querySelector('.selling-points')).toBeInTheDocument();
+    expect(shelf.querySelector('.product-reason')).toBeInTheDocument();
+  });
+
   test('uses the active topic instead of a stale recent topic and sends the session id', async () => {
     const activeSession = { ...session, sessionId: 'session-b', currentTopic: 'iPhone 17', recentTopics: ['跑步耳机掉落问题'] };
     const getSessionState = vi.fn().mockResolvedValue(activeSession);
@@ -244,5 +280,71 @@ describe('Final Creator Home', () => {
     const shelf = screen.getByRole('region', { name: '小柠帮你挑' });
     expect(shelf).toHaveTextContent('查看实时价格');
     expect(shelf).not.toHaveTextContent('169.99');
+  });
+
+  test('renders parsed product identity and evidence-backed specifications separately', async () => {
+    const sendChat = vi.fn().mockResolvedValue({
+      interaction: 'CURATE',
+      segments: [{ type: 'text', content: '这款的版本和容量都能核对。' }],
+      products: [{
+        id: 'iphone-17', title: 'iPhone 17 (Unlocked)', brand: 'Apple', model: 'iPhone 17', variantLabel: 'Unlocked',
+        price: 999.99, currency: 'USD', imageUrl: null, merchant: 'Example Shop', productUrl: 'https://shop.example/products/iphone-17', source: 'shopify',
+        specifications: [
+          { label: '容量', value: '256GB', evidence: 'provider.variants[0].selectedOptions.Storage' },
+          { label: '颜色', value: 'Black', evidence: 'provider.variants[0].selectedOptions.Color' },
+          { label: '网络/解锁', value: 'Unlocked', evidence: 'provider.title' },
+          { label: '尺寸', value: '6.3 英寸', evidence: 'provider.metadata.display' },
+          { label: '其他', value: 'Dual SIM', evidence: 'provider.metadata.sim' },
+        ],
+        productInsights: {
+          productId: 'iphone-17',
+          sellingPoints: [{ label: '明确续航信息', detail: '商品资料提供了可核对的续航时长。', evidence: 'description: 24 hours battery.' }],
+          personalizedReason: '你正在看已解锁版本，这款资料明确给出了对应版本。', tradeoff: null, confidence: 0.8,
+        },
+      }],
+    });
+    render(<App getSessionState={vi.fn().mockResolvedValue(session)} sendChat={sendChat} />);
+    await screen.findByTestId('avatar-stage');
+    fireEvent.change(screen.getByPlaceholderText('和小柠说点什么…'), { target: { value: '我要 iPhone 17' } });
+    fireEvent.click(screen.getByRole('button', { name: '发送' }));
+    const shelf = await screen.findByRole('region', { name: '小柠帮你挑' });
+    expect(shelf).toHaveTextContent('Apple');
+    expect(shelf).toHaveTextContent('iPhone 17');
+    expect(shelf).toHaveTextContent('Unlocked');
+    expect(shelf).toHaveTextContent('规格信息');
+    expect(shelf).toHaveTextContent('256GB');
+    expect(shelf).toHaveTextContent('Black');
+    expect(shelf).toHaveTextContent('查看全部规格');
+    expect(shelf).toHaveTextContent('明确续航信息');
+    expect(shelf).toHaveTextContent('为什么小柠挑它');
+  });
+
+  test('uses a full-width horizontal layout when one product is recommended', async () => {
+    const sendChat = vi.fn().mockResolvedValue({
+      interaction: 'CURATE',
+      segments: [{ type: 'text', content: '这款信息最完整。' }],
+      products: [{
+        id: 'single-product', title: 'Xiaomi 17 Pro Max Chinese Version', brand: 'Xiaomi', model: '17 Pro Max', variantLabel: 'Chinese Version',
+        price: 1041, currency: 'USD', imageUrl: null, merchant: 'Example Shop', productUrl: 'https://shop.example/single-product',
+        specifications: [{ label: '存储容量', value: '16GB+1TB', evidence: 'provider.variants[0].Storage' }],
+        productInsights: { sellingPoints: [{ label: '屏幕', detail: '商品资料明确提供显示信息。', evidence: 'description: AMOLED display.' }], personalizedReason: '这款配置更完整。' },
+      }],
+    });
+    render(<App getSessionState={vi.fn().mockResolvedValue(session)} sendChat={sendChat} />);
+    await screen.findByTestId('avatar-stage');
+    await userEvent.setup().type(screen.getByPlaceholderText('和小柠说点什么…'), '帮我直接挑一款');
+    await screen.getByRole('button', { name: '发送' }).click();
+    const shelf = await screen.findByRole('region', { name: '小柠帮你挑' });
+    expect(shelf.querySelector('.product-list')).toHaveAttribute('data-card-layout', 'single-horizontal');
+  });
+
+  test('keeps creator message metadata in an inline row on desktop', async () => {
+    const historySession = {
+      ...session,
+      history: [{ role: 'assistant', content: '这是一段可以连续阅读的回复。' }],
+    };
+    render(<App getSessionState={vi.fn().mockResolvedValue(historySession)} sendChat={vi.fn()} />);
+    expect(await screen.findByText('这是一段可以连续阅读的回复。')).toBeInTheDocument();
+    expect(document.querySelector('.creator-message-meta')).toHaveClass('creator-message-meta-inline');
   });
 });

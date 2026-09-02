@@ -80,6 +80,24 @@ const POINT_RULES = [
     suitableFor: '在意长时间佩戴负担的人',
   },
   {
+    label: '宽松版型',
+    pattern: /oversized|relaxed(?:\s|-)?fit|loose(?:\s|-)?fit|宽松|廓形/i,
+    detail: '商品资料明确提到宽松、廓形或 relaxed fit 版型。',
+    suitableFor: '偏好宽松穿着感的人',
+  },
+  {
+    label: '厚实面料',
+    pattern: /heavyweight|fleece|insulated|thermal|厚实|加厚|摇粒绒|保暖/i,
+    detail: '商品资料明确提到厚实、加厚、抓绒或保暖面料。',
+    suitableFor: '需要更有分量或保暖感的人',
+  },
+  {
+    label: '日常易穿',
+    pattern: /versatile|everyday|casual|daily|日常|百搭/i,
+    detail: '商品资料明确将它描述为日常、休闲或多用途穿着。',
+    suitableFor: '想把一件衣服穿得更频繁的人',
+  },
+  {
     label: '降噪取向',
     pattern: /active noise cancellation|noise cancel(?:ling|ation)?|\banc\b|主动降噪|降噪/i,
     detail: '商品资料明确提到降噪能力。',
@@ -96,19 +114,6 @@ const POINT_RULES = [
     pattern: /\d+(?:\.\d+)?\s*(?:hours?|hrs?|小时).*?(?:battery|playback|续航)|(?:battery|playback|续航).*?\d+(?:\.\d+)?\s*(?:hours?|hrs?|小时)/i,
     detail: '商品资料提供了可核对的续航时长。',
     suitableFor: '在意单次使用时长的人',
-  },
-  {
-    label: '明确型号',
-    pattern: /\b(?:iphone|galaxy|pixel|wf-|wh-|airpods|watch)\s*[a-z0-9-]+\b/i,
-    detail: '商品标题给出了可核对的品牌系列或具体型号。',
-    suitableFor: '已经锁定具体系列的人',
-  },
-  {
-    label: '可选规格',
-    pattern: /(?:color|size|颜色|尺寸|容量)\s*:/i,
-    fields: ['options', 'variants'],
-    detail: '商品资料列出了可选择的颜色、尺寸或容量规格。',
-    suitableFor: '希望比较具体规格的人',
   },
 ];
 
@@ -148,21 +153,23 @@ function personalizedReason(points, contextText) {
   if (/跑步|运动|running|sport/i.test(contextText) && labels.has('明确续航信息')) {
     return '你是在看跑步场景，这款资料还给出了可核对的续航信息，适合把单次使用时长一起纳入比较。';
   }
-  if (/跑步|运动|running|sport/i.test(contextText) && labels.has('可选规格')) {
-    return '你现在找的是跑步场景；这款资料明确列出运动定位和可选规格，适合先确认具体版本。';
-  }
   if (/跑步|运动|running|sport/i.test(contextText) && labels.has('运动场景')) {
     return '你现在找的是跑步场景，商品资料也明确把运动列为使用方向，所以我把它留下来比较。';
   }
   if (/通勤|地铁|噪|commute/i.test(contextText) && labels.has('降噪取向')) {
     return '你更在意通勤环境，商品资料明确提到降噪，这一点和当前场景能对上。';
   }
-  if (/手机|iphone|型号/i.test(contextText) && labels.has('明确型号')) {
-    return '你正在看具体手机系列，这条结果的标题给出了可核对型号，先从明确款开始更稳妥。';
-  }
   return points[0]
     ? `你当前在看这一类商品；我只保留了资料能直接支持的“${points[0].label}”，没有替它补参数。`
     : '';
+}
+
+function hasTrustworthyProductEvidence(evidence) {
+  const hasTitle = evidence.some((item) => item.field === 'title');
+  const hasSupportingData = evidence.some((item) => [
+    'description', 'productType', 'vendor', 'tags', 'options', 'variants', 'metadata', 'price',
+  ].includes(item.field));
+  return hasTitle && hasSupportingData;
 }
 
 function priceTradeoff(product, context = {}) {
@@ -182,9 +189,10 @@ export function buildProductInsights(product = {}, context = {}) {
   const sellingPoints = rawPoints.map(({ priority: _priority, suitableFor: _suitableFor, ...point }) => point);
   const suitableFor = [...new Set(rawPoints.map((point) => point.suitableFor).filter(Boolean))].slice(0, 3);
   const reason = personalizedReason(sellingPoints, contextText);
+  const hasProductEvidence = hasTrustworthyProductEvidence(evidence);
   const confidence = sellingPoints.length
     ? Math.min(0.95, 0.4 + sellingPoints.length * 0.12 + (reason ? 0.1 : 0) + Math.min(0.09, evidence.length * 0.01))
-    : 0;
+    : hasProductEvidence ? 0.46 : 0;
   return {
     productId: product.id || product.productUrl || null,
     sellingPoints,
@@ -192,18 +200,33 @@ export function buildProductInsights(product = {}, context = {}) {
     personalizedReason: reason,
     tradeoff: priceTradeoff(product, context),
     confidence: Number(confidence.toFixed(2)),
+    specifications: Array.isArray(product.specifications) ? product.specifications : [],
   };
+}
+
+function normalizeSpecToken(value) {
+  return String(value || '').toLowerCase().replace(/\s+/g, '');
+}
+
+function matchesRequestedSpecifications(product, contextText) {
+  const requested = [...new Set(contextText.match(/\b\d+(?:\.\d+)?\s*(?:gb|tb)\b/gi) || [])].map(normalizeSpecToken);
+  if (!requested.length) return true;
+  const available = [product.variantLabel, ...(product.specifications || []).flatMap((spec) => [spec.label, spec.value])]
+    .filter(Boolean).map(normalizeSpecToken).join(' ');
+  return requested.every((token) => available.includes(token));
 }
 
 export function rankInsightfulProducts(products = [], context = {}, limit = 3) {
   const selected = [];
   const signatures = new Set();
+  const contextText = clean([context.message, context.topic, ...(context.requirements || [])].filter(Boolean).join(' '));
   for (const product of products) {
+    if (!matchesRequestedSpecifications(product, contextText)) continue;
     const productInsights = buildProductInsights(product, context);
-    if (!productInsights.sellingPoints.length || productInsights.confidence < 0.45) continue;
+    if (productInsights.confidence < 0.45) continue;
     const signature = productInsights.sellingPoints.map((point) => point.label).sort().join('|');
-    if (!signature || signatures.has(signature)) continue;
-    signatures.add(signature);
+    if (signature && signatures.has(signature)) continue;
+    if (signature) signatures.add(signature);
     selected.push({
       ...product,
       productInsights,

@@ -121,12 +121,14 @@ export const ANALYZE_TOOL = {
         shopping_intent: { type: 'string', enum: ['none', 'latent', 'implicit', 'explicit'], description: '购物意图：none无/latent潜在/implicit隐含/explicit明确' },
         occasion: { type: 'string', description: '场景/场合，如 work/date/party/daily/gift，没有则为 null' },
         requirements: { type: 'array', items: { type: 'string' }, description: '用户明确提到的需求/要求列表' },
-        recommendation_readiness: { type: 'number', description: '推荐时机成熟度 0-1。低于 0.65 时不要进入 CURATE。' },
+        recommendation_readiness: { type: 'number', description: '你判断现在直接推荐的成熟度 0-1；结合用户这轮意图和上下文判断，不按固定关键词阈值机械处理。' },
+        should_recommend: { type: 'boolean', description: '由你判断这一轮是否应该直接搜索并展示商品。要看语义、上下文、已知品类和用户是否已经准备好做选择，而不是只看是否命中“推荐/看看”等词。' },
+        recommendation_reason: { type: 'string', description: '一句话说明为什么现在推荐或为什么还不推荐，供系统记录，不直接展示给用户。' },
         explicit_facts: { type: 'array', items: { type: 'string' }, description: '只记录用户原话中明确表达的事实，不要推断关系、情绪原因或对方想法' },
         interaction: { type: 'string', enum: ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'], description: '应该使用的交互模式' },
         conversation_flow: { type: 'string', enum: ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'], description: '这一轮对话如何推进' },
       },
-      required: ['emotion', 'emotion_intensity', 'user_need', 'topic', 'product_category', 'requirements', 'budget', 'occasion', 'recommendation_readiness', 'explicit_facts', 'interaction', 'conversation_flow'],
+      required: ['emotion', 'emotion_intensity', 'user_need', 'topic', 'product_category', 'requirements', 'budget', 'occasion', 'recommendation_readiness', 'should_recommend', 'recommendation_reason', 'explicit_facts', 'interaction', 'conversation_flow'],
     },
   },
 };
@@ -270,7 +272,7 @@ export function buildMessages(session, userMessage, options = {}, legacyResponse
 export function buildAnalysisMessages(session, userMessage) {
   const context = selectRelevantContext(session, userMessage);
   const memories = compactMemories(context);
-  const systemContent = `你只负责把当前用户消息分析成工具要求的结构化字段，不写回复。user_need 只能用 vent、comfort、celebrate、advice、casual_chat、opinion；topic 描述此刻正在谈什么；shopping_intent 用 none、latent、implicit、explicit；interaction 用 REACT、SHARE、ASK、CALLBACK、CURATE；conversation_flow 用 CONTINUE、EXPAND、SHARE、SHIFT、CALLBACK。提取 product_category、requirements、budget、occasion 和 0–1 的 recommendation_readiness。explicit_facts 只能摘录用户原话明确表达的事实。${memories.length ? `\n相关上下文：${memories.join('；')}` : ''}`;
+  const systemContent = `你只负责把当前用户消息分析成工具要求的结构化字段，不写回复。user_need 只能用 vent、comfort、celebrate、advice、casual_chat、opinion；topic 描述此刻正在谈什么；shopping_intent 用 none、latent、implicit、explicit；interaction 用 REACT、SHARE、ASK、CALLBACK、CURATE；conversation_flow 用 CONTINUE、EXPAND、SHARE、SHIFT、CALLBACK。提取 product_category、requirements、budget、occasion 和 0–1 的 recommendation_readiness。你必须自己根据用户语义和相关上下文判断 should_recommend：如果用户已经在明确寻找某类商品、表达想看/想买/想要几款，且品类或商品上下文足够，就算没有命中固定关键词也可以为 true；如果用户只是在讨论已有商品、表达观点或明确说不用推荐，就为 false。不要用正则命中与否代替这个判断。should_recommend=true 时 interaction 应为 CURATE；should_recommend=false 时不要进入 CURATE。explicit_facts 只能摘录用户原话明确表达的事实。${memories.length ? `\n相关上下文：${memories.join('；')}` : ''}`;
 
   return [
     { role: 'system', content: systemContent },

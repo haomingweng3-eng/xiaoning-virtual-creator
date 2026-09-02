@@ -1,5 +1,6 @@
 const SHOPIFY_GLOBAL_CATALOG_ENDPOINT = 'https://catalog.shopify.com/api/ucp/mcp';
 const AGENT_PROFILE = 'https://shopify.dev/ucp/agent-profiles/examples/2026-04-08/valid-with-capabilities.json';
+import { normalizeProductSpecifications } from './productSpecifications.js';
 
 function firstValue(...values) {
   return values.find((value) => value !== undefined && value !== null && value !== '') ?? null;
@@ -68,6 +69,7 @@ export function normalizeShopifyProducts(payload) {
       options: Array.isArray(product.options) ? product.options : [],
       variants: Array.isArray(product.variants) ? product.variants.map(compactVariant) : [],
       metadata: product.metadata && typeof product.metadata === 'object' ? product.metadata : {},
+      ...normalizeProductSpecifications(product, variant, Math.max(0, (product.variants || []).indexOf(variant))),
     };
   }).filter((product) => product?.title && (product.productUrl || product.checkoutUrl)).slice(0, 3);
 }

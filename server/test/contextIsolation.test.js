@@ -11,7 +11,7 @@ function analysisFor(message) {
   if (message.includes('iPhone17')) return { topic: 'iPhone 17', interaction_mode: 'SHARE' };
   if (message.includes('换个手机')) return { topic: '手机', interaction_mode: 'SHARE' };
   if (message.includes('跑步的时候')) return { topic: '跑步', interaction_mode: 'SHARE' };
-  if (message.includes('帮我看看耳机')) return { topic: '耳机', shopping_intent: 'explicit', recommendation_readiness: 1, interaction_mode: 'CURATE' };
+  if (message.includes('帮我看看耳机')) return { topic: '耳机', shopping_intent: 'explicit', should_recommend: true, recommendation_readiness: 1, interaction_mode: 'CURATE' };
   if (message.includes('耳机')) return { topic: '耳机', interaction_mode: 'SHARE', explicit_facts: ['耳机老往下掉'] };
   return { topic: '跑步', interaction_mode: 'SHARE', explicit_facts: ['最近开始跑步'] };
 }

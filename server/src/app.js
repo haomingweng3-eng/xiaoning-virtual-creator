@@ -113,6 +113,8 @@ export function createApp({ chat, store = null, filePath = null } = {}) {
           budget: result.analysis?.budget ?? null,
           occasion: result.analysis?.occasion ?? null,
           recommendation_readiness: result.analysis?.recommendation_readiness ?? 0,
+          should_recommend: result.analysis?.should_recommend === true,
+          recommendation_reason: result.analysis?.recommendation_reason || '',
         },
       });
     } catch (err) {

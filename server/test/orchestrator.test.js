@@ -17,7 +17,10 @@ function analysisCall(overrides = {}) {
   return toolCall('analyze_conversation', {
     emotion: 'neutral', emotion_intensity: 0.2, user_need: 'just_chatting', topic: '',
     conversation_goal: 'chat', shopping_intent: 'none', occasion: null, requirements: [],
-    recommendation_readiness: 0, product_category: null, budget: null, explicit_facts: [], interaction_mode: 'SHARE', ...overrides,
+    recommendation_readiness: 0,
+    should_recommend: overrides.should_recommend ?? ((overrides.interaction_mode === 'CURATE' || overrides.interaction === 'CURATE') && overrides.shopping_intent === 'explicit'),
+    recommendation_reason: '', product_category: null,
+    budget: null, explicit_facts: [], interaction_mode: 'SHARE', ...overrides,
   });
 }
 
@@ -91,6 +94,65 @@ describe('final interaction model', () => {
     expect(replySystem).not.toMatch(/Session isolation|Product Gate|只有 CURATE 允许商品搜索|pendingProduct 生命周期/);
     expect(analysisSystem).not.toContain('小柠是 Lifestyle Virtual Creator');
     expect((replySystem.match(/【相关创作者观点】/g) || [])).toHaveLength(1);
+  });
+
+  test('asks the LLM to decide recommendation readiness from meaning and context', () => {
+    const system = buildAnalysisMessages(createSession(), '通勤想找一件优衣库羽绒服')[0].content;
+    expect(system).toContain('should_recommend');
+    expect(system).toMatch(/语义|上下文|不要.*关键词|关键词.*不是/u);
+  });
+
+  test('LLM recommendation decision can curate a category absent from the keyword list', () => {
+    const result = applyConversationPolicy({
+      topic: '优衣库羽绒服',
+      product_category: '羽绒服',
+      shopping_intent: 'implicit',
+      should_recommend: true,
+      recommendation_readiness: 0.9,
+      interaction_mode: 'ASK',
+    }, '通勤想找一件优衣库羽绒服', {});
+    expect(result.interaction_mode).toBe('CURATE');
+    expect(result.shopping_intent).toBe('explicit');
+  });
+
+  test('LLM can keep a keyword-looking message out of curation', () => {
+    const result = applyConversationPolicy({
+      topic: '手机使用体验',
+      product_category: '手机',
+      shopping_intent: 'implicit',
+      should_recommend: false,
+      recommendation_readiness: 0.2,
+      interaction_mode: 'SHARE',
+    }, '我在看手机评测，不用推荐', {});
+    expect(result.interaction_mode).not.toBe('CURATE');
+  });
+
+  test('missing LLM recommendation decision does not fall back to keyword curation', () => {
+    const result = applyConversationPolicy({
+      topic: '手机',
+      product_category: '手机',
+      shopping_intent: 'none',
+      interaction_mode: 'SHARE',
+    }, '推荐手机', {});
+    expect(result.interaction_mode).not.toBe('CURATE');
+  });
+
+  test('LLM decision triggers search without a shopping keyword match', async () => {
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({
+        topic: '优衣库羽绒服', product_category: '羽绒服', shopping_intent: 'implicit',
+        should_recommend: true, recommendation_readiness: 0.9, interaction_mode: 'ASK',
+      }))
+      .mockResolvedValueOnce(creatorCall('我直接给你挑几件通勤更合适的。'));
+    const search = vi.fn().mockResolvedValue({
+      products: [{ id: 'p1', title: 'Ultra Light Down', description: 'Light down jacket', productUrl: 'https://shop.example/p1' }],
+      unavailable: false,
+    });
+
+    const result = await createChatOrchestrator({ complete, search })('通勤想找一件优衣库羽绒服', createSession());
+
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ category: '羽绒服' }));
+    expect(result.interaction).toBe('CURATE');
   });
 
   test('gives direct recommendation replies a short conclusion-first format', () => {
@@ -307,7 +369,7 @@ describe('final interaction model', () => {
 
   test('running and loose headphones remain SHARE, not commerce', () => {
     expect(applyConversationPolicy({ shopping_intent: 'none', interaction_mode: 'SHARE' }, '最近开始跑步了', {}).interaction_mode).toBe('SHARE');
-    expect(applyConversationPolicy({ shopping_intent: 'implicit', recommendation_readiness: 0.8, topic: '耳机', interaction_mode: 'CURATE' }, '但是跑步的时候耳机老往下掉', {}).interaction_mode).toBe('SHARE');
+    expect(applyConversationPolicy({ shopping_intent: 'implicit', should_recommend: false, recommendation_readiness: 0.8, topic: '耳机', interaction_mode: 'SHARE' }, '但是跑步的时候耳机老往下掉', {}).interaction_mode).toBe('SHARE');
   });
 
   test('commerce exit clears the pending recommendation and never searches', () => {
@@ -318,8 +380,18 @@ describe('final interaction model', () => {
   });
 
   test('only a clear category request can become CURATE', () => {
-    const result = applyConversationPolicy({ shopping_intent: 'explicit', topic: '耳机', interaction_mode: 'SHARE', recommendation_readiness: 1 }, '那你帮我看看有没有适合跑步的耳机', {});
+    const result = applyConversationPolicy({ shopping_intent: 'explicit', should_recommend: true, topic: '耳机', product_category: '耳机', interaction_mode: 'SHARE', recommendation_readiness: 1 }, '那你帮我看看有没有适合跑步的耳机', {});
     expect(result.interaction_mode).toBe('CURATE');
+  });
+
+  test('looking at a named phone category goes straight to product curation', () => {
+    const result = applyConversationPolicy(
+      { shopping_intent: 'latent', should_recommend: true, topic: '手机', product_category: '手机', interaction_mode: 'ASK', recommendation_readiness: 0.3 },
+      '我想看看华为手机',
+      {},
+    );
+    expect(result.interaction_mode).toBe('CURATE');
+    expect(result.shopping_intent).toBe('explicit');
   });
 
   test('CURATE calls the injected real provider and returns mixed segments', async () => {
@@ -390,14 +462,14 @@ describe('final interaction model', () => {
   });
 
   test('a shopping confirmation can reuse only an existing explicit category', () => {
-    const result = applyConversationPolicy({ shopping_intent: 'none', interaction_mode: 'SHARE', recommendation_readiness: 0 }, '那你帮我看看有什么合适的', { pendingProduct: '耳机' });
+    const result = applyConversationPolicy({ shopping_intent: 'none', should_recommend: true, interaction_mode: 'SHARE', recommendation_readiness: 0 }, '那你帮我看看有什么合适的', { pendingProduct: '耳机' });
     expect(result.interaction_mode).toBe('CURATE');
     expect(result.topic).toBe('耳机');
   });
 
   test('a link request continues the pending product instead of falling back to generic chat', () => {
     const result = applyConversationPolicy(
-      { shopping_intent: 'none', interaction_mode: 'SHARE', recommendation_readiness: 0 },
+      { shopping_intent: 'none', should_recommend: true, interaction_mode: 'SHARE', recommendation_readiness: 0 },
       '给我链接啊',
       { pendingProduct: 'MacBook', currentTopic: 'MacBook' },
     );
@@ -405,11 +477,22 @@ describe('final interaction model', () => {
     expect(result.topic).toBe('MacBook');
   });
 
+  test('a casual direct recommendation request overrides an analysis ASK for a known product', () => {
+    const result = applyConversationPolicy(
+      { topic: '手机', product_category: '手机', shopping_intent: 'latent', should_recommend: true, interaction_mode: 'ASK', recommendation_readiness: 0.3 },
+      '随便给我推荐几款',
+      { pendingProduct: '手机', currentTopic: '小米手机' },
+    );
+    expect(result.interaction_mode).toBe('CURATE');
+    expect(result.shopping_intent).toBe('explicit');
+    expect(result.recommendation_readiness).toBe(1);
+  });
+
   test('explicit recommendation follow-up curates the known product without asking again', async () => {
     const complete = vi.fn()
       .mockResolvedValueOnce(analysisCall({ topic: 'iPhone 17', product_category: 'iPhone 17', shopping_intent: 'latent', interaction_mode: 'ASK' }))
       .mockResolvedValueOnce(creatorCall('先给你挑几款。'))
-      .mockResolvedValueOnce(analysisCall({ topic: 'iPhone 17', shopping_intent: 'explicit', interaction_mode: 'ASK' }))
+      .mockResolvedValueOnce(analysisCall({ topic: 'iPhone 17', shopping_intent: 'explicit', should_recommend: true, interaction_mode: 'ASK' }))
       .mockResolvedValueOnce(creatorCall('我直接帮你看几款。'));
     const search = vi.fn().mockResolvedValue({ products: [{ title: 'iPhone 17', price: 5999, currency: 'CNY', image: 'https://example.com/iphone.jpg', url: 'https://example.com/iphone' }], unavailable: false });
     const session = createSession();
@@ -442,7 +525,7 @@ describe('final interaction model', () => {
     const complete = vi.fn()
       .mockResolvedValueOnce(analysisCall({ topic: '耳机', shopping_intent: 'none', interaction_mode: 'SHARE' }))
       .mockResolvedValueOnce(creatorCall('耳机老往下掉确实会打断节奏。'))
-      .mockResolvedValueOnce(analysisCall({ topic: '跑步', shopping_intent: 'none', interaction_mode: 'SHARE' }))
+      .mockResolvedValueOnce(analysisCall({ topic: '跑步', shopping_intent: 'none', should_recommend: true, interaction_mode: 'SHARE' }))
       .mockResolvedValueOnce(creatorCall('我帮你看几种更稳的。'));
     const search = vi.fn().mockResolvedValue({ products: [], unavailable: false });
     const session = createSession();

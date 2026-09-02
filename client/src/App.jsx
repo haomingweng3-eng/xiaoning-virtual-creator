@@ -102,9 +102,9 @@ function CreatorHeader({ creator, status, topic, onNewSession, onOpenConversatio
         <p>{status}{topic ? ` · ${topic}` : ''}</p>
       </div>
       <div className="creator-header-actions">
-        <button type="button" className="new-conversation" onClick={onOpenConversations}>会话</button>
-        <button type="button" className="new-conversation" onClick={onOpenMemory}>小柠记住的</button>
-        <button type="button" className="new-conversation" onClick={onNewSession}>新对话</button>
+        <button type="button" className="new-conversation" onClick={onOpenConversations} aria-label="打开会话列表">会话</button>
+        <button type="button" className="new-conversation" onClick={onOpenMemory} aria-label="打开小柠记住的">小柠记住的</button>
+        <button type="button" className="new-conversation" onClick={onNewSession} aria-label="新对话">新对话</button>
         <span className="creator-header-mark" aria-hidden="true" />
       </div>
     </header>
@@ -204,11 +204,28 @@ function Sidebar({ conversations, activeId, memory, onSelect, onNew, onDelete, o
 }
 
 function CreatorPanel({ creator, todayNote, avatar, configuredMode, configuredMood, status, topic, currentPick, recentInteractions, onOpenHistory, shelfProducts }) {
+  const currentPickImage = currentPick?.imageUrl || currentPick?.image;
+  const currentPickUrl = currentPick?.productUrl || currentPick?.url;
+  const currentPickInsights = currentPick?.productInsights || {};
   return <aside className="creator-panel" data-testid="creator-panel">
     <div className="creator-panel-heading"><div><strong>{creator.name}</strong><small>生活方式虚拟创作者</small></div><span><i />在线</span></div>
     <AvatarStage creatorName={creator.name} mode={configuredMode} mood={configuredMood} status={status} topic={topic} media={avatar.mediaByMode?.[configuredMode] || avatar.media} fallbackImage={avatar.fallbackImage} modeObjectPosition={avatar.modeObjectPosition} recentInteractions={recentInteractions} currentPick={currentPick} onOpenHistory={onOpenHistory} />
     <div className="creator-note"><span>小柠的今日想法</span><p>{todayNote?.opinion || creator.signature || '专注当下，认真生活，也给自己一点小确幸。'}</p></div>
-    {shelfProducts.length > 0 && <div className="creator-mini-shelf"><span>小柠帮你挑</span>{shelfProducts.slice(0, 3).map((product) => <div className="creator-mini-product" key={product.productUrl || product.url}><strong>{product.title}</strong><small>{formatMoney(product.price, product.currency) || '查看实时价格'}</small></div>)}</div>}
+    {shelfProducts.length > 0 && currentPick && <section className="creator-current-pick" aria-label="当前推荐">
+      <div className="creator-current-pick-heading"><span>当前推荐</span><span aria-hidden="true">›</span></div>
+      <div className="creator-current-pick-body">
+        <div className="creator-current-pick-image">
+          {currentPickImage ? <img src={currentPickImage} alt="" /> : <span>实时商品</span>}
+        </div>
+        <div className="creator-current-pick-copy">
+          <strong>{currentPick.model || currentPick.title}</strong>
+          {currentPick.variantLabel && <span>{currentPick.variantLabel}</span>}
+          <b>{formatMoney(currentPick.price, currentPick.currency) || '查看实时价格'}</b>
+        </div>
+      </div>
+      {(currentPickInsights.personalizedReason || currentPick.reason) && <p><span>理由</span>{currentPickInsights.personalizedReason || currentPick.reason}</p>}
+      {/^https?:\/\//i.test(String(currentPickUrl || '')) && <a href={currentPickUrl} target="_blank" rel="noreferrer">查看详情 <span aria-hidden="true">↗</span></a>}
+    </section>}
   </aside>;
 }
 
@@ -218,7 +235,7 @@ function UserMessage({ message }) {
 
 function CreatorMessage({ message, creatorName = '小柠', showMeta = true }) {
   return <article className={`history-message history-message-creator ${showMeta ? '' : 'history-message-continuation'}`}>
-    {showMeta ? <div className="creator-message-meta"><span className="message-avatar">小</span><strong>{creatorName}</strong><time>{message.time || '刚刚'}</time></div> : <div className="creator-message-meta-spacer" aria-hidden="true" />}
+    {showMeta ? <div className="creator-message-meta creator-message-meta-inline"><span className="message-avatar">小</span><strong>{creatorName}</strong><time>{message.time || '刚刚'}</time></div> : <div className="creator-message-meta-spacer" aria-hidden="true" />}
     <div className="creator-message-body">{message.segments.map((segment, index) => <p key={`${segment.content}-${index}`} className={segment.type === 'creator_note' ? 'creator-note-segment' : ''}>{segment.content}</p>)}</div>
   </article>;
 }
@@ -286,8 +303,15 @@ function ProductCard({ product, index }) {
   const formattedPrice = formatMoney(product.price, product.currency);
   const insights = product.productInsights || {};
   const sellingPoints = Array.isArray(insights.sellingPoints) ? insights.sellingPoints.filter((point) => point?.label && point?.detail && point?.evidence).slice(0, 3) : [];
+  const specifications = (Array.isArray(product.specifications) ? product.specifications : insights.specifications || [])
+    .filter((spec) => spec?.label && spec?.value && spec?.evidence);
   const reason = insights.personalizedReason || product.reason;
   const tradeoff = insights.tradeoff || product.tradeoff;
+  const brand = product.brand || null;
+  const model = product.model || product.title;
+  const variantLabel = product.variantLabel || null;
+  const visibleSpecifications = specifications.slice(0, 4);
+  const extraSpecifications = specifications.slice(4);
   return (
     <a className="product-card" href={productUrl} target="_blank" rel="noreferrer" aria-label={product.title}>
       <div className={`product-image ${hasImage ? '' : 'product-image-fallback'}`}>
@@ -296,12 +320,21 @@ function ProductCard({ product, index }) {
       </div>
       <div className="product-info">
         <div className="product-source">{product.merchant || product.source || '实时商品'}</div>
-        <h3>{product.title}</h3>
+        <div className="product-identity" title={product.title}>
+          {brand && <span className="product-brand">{brand}</span>}
+          <h3>{model}</h3>
+          {variantLabel && <span className="product-variant">{variantLabel}</span>}
+        </div>
         <div className="product-footer"><span className={formattedPrice ? 'product-price' : 'product-price product-price-muted'}>{formattedPrice || '查看实时价格'}</span><span className="product-link-label">查看商品 ↗</span></div>
+        {specifications.length > 0 && <div className="product-specifications">
+          <span className="product-specifications-title">规格信息</span>
+          <dl>{visibleSpecifications.map((spec) => <div className="product-specification-row" key={`${spec.label}-${spec.value}`}><dt>{spec.label}</dt><dd title={spec.evidence}>{spec.value}</dd></div>)}</dl>
+          {extraSpecifications.length > 0 && <details><summary>查看全部规格 <span aria-hidden="true">›</span></summary><dl>{extraSpecifications.map((spec) => <div className="product-specification-row" key={`${spec.label}-${spec.value}`}><dt>{spec.label}</dt><dd title={spec.evidence}>{spec.value}</dd></div>)}</dl></details>}
+        </div>}
         {sellingPoints.length > 0 && <ul className="selling-points">{sellingPoints.map((point) => <li key={`${point.label}-${point.evidence}`}><strong>{point.label}</strong><span>{point.detail}</span></li>)}</ul>}
         {reason && <p className="product-reason"><span>为什么小柠挑它</span>{reason}</p>}
         {tradeoff && <p className="product-tradeoff"><span>小柠提醒</span>{tradeoff}</p>}
-        {sellingPoints.length > 0 && <details className="product-evidence"><summary>商品资料依据</summary>{sellingPoints.map((point) => <p key={point.evidence}>{point.evidence}</p>)}</details>}
+        {sellingPoints.length > 0 && <details className="product-evidence"><summary>商品资料依据</summary>{sellingPoints.map((point, pointIndex) => <p key={`${point.evidence}-${pointIndex}`}>{point.evidence}</p>)}</details>}
       </div>
     </a>
   );
@@ -309,10 +342,11 @@ function ProductCard({ product, index }) {
 
 function ProductShelf({ products, topic }) {
   if (!products.length) return null;
+  const cardLayout = products.length === 1 ? 'single-horizontal' : products.length === 2 ? 'two-column' : 'three-column';
   return (
     <section className="product-shelf" aria-label="小柠帮你挑">
       <div className="shelf-heading"><div><span>CREATOR PICKS</span><h2>小柠帮你挑{topic ? ` · ${topic}` : ''}</h2></div><p>根据你刚才说的{topic ? `${topic}需求` : '需求'}，我先留下这几款。</p></div>
-      <div className={`product-list product-list-count-${products.length}`}>{products.map((product, index) => <ProductCard key={`${product.productUrl || product.url}-${index}`} product={product} index={index} />)}</div>
+      <div className={`product-list product-list-count-${products.length}`} data-card-layout={cardLayout}>{products.map((product, index) => <ProductCard key={`${product.productUrl || product.url}-${index}`} product={product} index={index} />)}</div>
     </section>
   );
 }
@@ -438,13 +472,13 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   const recentInteractions = allInteractions.slice(-4);
 
   return (
-    <main className={`creator-app ${messages.length ? 'has-conversation' : ''}`} data-testid="livestream-room">
+    <main className={`creator-app ${messages.length ? 'has-conversation' : ''}`} data-testid="livestream-room" data-layout="three-column">
       <div className="app-shell">
         <Sidebar conversations={conversations} activeId={conversationId} memory={memory} onSelect={(id) => setConversationId(id)} onNew={startNewConversation} onDelete={removeConversation} onOpenMemory={() => setManagementOpen('memory')} />
         <section className="conversation-pane" data-testid="conversation-pane">
           <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} onOpenConversations={() => setManagementOpen('conversations')} onOpenMemory={() => setManagementOpen('memory')} />
           <div className="conversation-body">
-            <div className="conversation-heading"><div><h2>{session.title || topic || '和小柠聊聊'}</h2></div><div className="conversation-heading-actions"><span>{session.updatedAt ? formatConversationTime(session.updatedAt) : '刚刚'}</span><button type="button" aria-label="更多">•••</button></div></div>
+            <div className="conversation-heading"><div><span>CONVERSATION</span><h2>{session.title || topic || '和小柠聊聊'}</h2></div><div className="conversation-heading-actions"><span>{session.updatedAt ? formatConversationTime(session.updatedAt) : '刚刚'}</span><button type="button" className="conversation-search" aria-label="搜索对话">⌕</button><button type="button" aria-label="更多">•••</button></div></div>
             {messages.length ? <div className="message-list" ref={messageListRef}>{messages.map((message, index) => message.role === 'user' ? <UserMessage key={`message-user-${index}`} message={message} /> : <CreatorMessage key={`message-creator-${index}`} message={message} creatorName={creator.name} showMeta={index === 0 || messages[index - 1]?.role !== 'assistant'} />)}{loading && <TypingIndicator />}{shelfProducts.length > 0 && <ProductShelf products={shelfProducts} topic={topic} />}</div> : <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
           </div>
           <div className="conversation-compose"><Composer input={input} setInput={setInput} onSubmit={submitMessage} loading={loading} status={status} /></div>

@@ -2,7 +2,7 @@
 
 小柠是一个真实 LLM 与真实商品 Provider 驱动的 Lifestyle Virtual Creator：先理解情绪、延续相关上下文和表达自己的生活方式观点，只有用户明确需要挑商品时才进入带货。
 
-![小柠首页](artifacts/release-screenshots/01-home.png)
+![小柠首页](docs/screenshots/01-home.png)
 
 ## 核心能力
 
@@ -11,14 +11,15 @@
 - **Virtual Creator**：原创 IP AvatarStage、`REACT / SHARE / ASK / CALLBACK / CURATE` 五种互动模式、最近 2–4 条互动与完整历史 drawer。
 - **Conversation Management**：`visitorId` 与 `conversationId` 分离；支持新建、列表、切换、删除、刷新恢复，并用 JSON FileStore 在 server restart 后恢复。
 - **Memory**：每个 `conversationId` 独立保存 history、明确事实、偏好、话题和 pendingProduct；相关时召回，无关时隔离。
-- **Commerce**：Shopify Global Catalog 优先，Tavily fallback；只有 `CURATE && products.length > 0` 才展示 Product Shelf。
+- **Commerce**：由 LLM 根据语义判断是否进入 `CURATE`，Shopify Global Catalog 优先、Tavily fallback；只有 `CURATE && products.length > 0` 才展示 Product Shelf。
 - **Product Evidence**：所有卖点来自真实 Provider 字段并保留 evidence；无依据参数、虚构亲测和裸价格不会展示。
+- **Product Specifications**：商品卡从真实 Provider 的 title、vendor、options、variants、metadata 等字段解析品牌、型号、版本和具体规格；没有证据就不显示。
 
 这是一个 24 小时 Vibe Coding MVP。它的核心不是商城搜索，而是先陪用户聊天、理解情绪和上下文，只有消费需求明确时才调用真实商品 Provider。
 
-![情绪陪伴](artifacts/visual-qa/02-emotional.png)
+![情绪陪伴](docs/screenshots/02-emotional.png)
 
-![真实商品橱窗](artifacts/visual-qa/06-curate.png)
+![真实商品橱窗](docs/screenshots/06-curate.png)
 
 ## 产品与技术架构
 
@@ -29,11 +30,12 @@ flowchart TD
     API --> SI[Session Isolation]
     SI --> FS[FileStore]
     SI --> CA[ConversationAnalysis]
-    CA --> IP[Deterministic Interaction Policy]
-    IP --> LLM[OpenAI-compatible LLM]
-    LLM --> C{CURATE?}
-    C -- NO --> R[Creator Reply]
-    C -- YES --> CP[Commerce Provider]
+    CA --> LLM[OpenAI-compatible LLM / Tool Calling]
+    LLM --> D{should_recommend?}
+    D -- NO --> IP[Hard safety guardrails]
+    D -- YES --> C[CURATE]
+    IP --> R[Creator Reply]
+    C --> CP[Commerce Provider]
     CP --> S[Shopify Global Catalog]
     S -->|empty / unavailable| T[Tavily]
     T --> G[Product Rendering Gate]
@@ -111,7 +113,7 @@ Provider 顺序：
 2. Shopify 空结果/不可用时降级 Tavily
 3. Product Rendering Gate 过滤文章、攻略、排行榜、搜索页、无具体商品 URL 与重复结果
 4. Product Evidence 从 title、description、productType、vendor、tags、options、variants、metadata、price/currency 中保留可追溯信息
-5. ProductInsights 只总结证据支持的 selling points，并结合用户当前明确需求生成 personalized reason
+5. ProductInsights 只总结证据支持的 selling points 和 specifications，并结合用户当前明确需求生成 personalized reason
 
 0 个可信商品是合法结果。此时小柠会明确说没有找到足够靠谱的具体款，不会补造商品或降低标准。
 
@@ -125,12 +127,12 @@ client/
 server/src/
   app.js                           # visitor/conversation API + session Map
   fileStore.js                     # JSON persistence across restart
-  conversationAnalysis.js          # LLM analysis + deterministic policy
+  conversationAnalysis.js          # LLM semantic analysis + hard guardrails
   prompts.js                       # 角色、事实边界、memory relevance
   orchestrator.js                  # 回复/搜索/状态生命周期
   productSearch.js                 # Tavily + Product Gate
   shopifyCatalog.js                # Shopify Global Catalog
-  productInsights.js               # Evidence -> insights -> pitch
+  productInsights.js               # Evidence -> specifications/insights -> pitch
   conversationNaturalness.js       # Transcript naturalness metrics
 scripts/
   golden-conversation.mjs          # 10 个真实 Golden cases
@@ -159,7 +161,7 @@ artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 eviden
 - 商品字段依赖外部 Provider；真实商品可能缺少价格、图片或足够证据。
 - Shopify/Tavily 和 LLM 都受外部网络、额度与 API 可用性影响。
 - 无可信结果时系统选择不推荐，因此某些查询会显示 0 个商品。
-- 当前仓库尚无 GitHub remote；只有真实 push 完成后才能补充 GitHub URL。
+- 当前本地仓库尚无 GitHub remote。由于本机没有 `gh` CLI，最终交付只完成本地提交；GitHub URL 不虚构。
 
 ## 更多文档
 
