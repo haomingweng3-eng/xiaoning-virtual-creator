@@ -119,7 +119,7 @@ Personalized reason:
 
 ## 十、测试与质量保障
 
-- **Unit / Integration**：Server 55/55，Client 11/11。
+- **Unit / Integration**：Server 90/90，Client 13/13。
 - **Production Build**：Vite build exit 0。
 - **Golden QA**：10/10，覆盖情绪、正向反馈、隐式需求、明确带货、取消带货、Session 隔离、Callback、事实边界和 Product Evidence。
 - **Visual QA**：9/9，覆盖 1440、1024、768、390；所有截图来自真实浏览器和真实前后端。

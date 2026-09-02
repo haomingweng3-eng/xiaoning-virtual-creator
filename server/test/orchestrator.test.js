@@ -93,6 +93,57 @@ describe('final interaction model', () => {
     expect((replySystem.match(/【相关创作者观点】/g) || [])).toHaveLength(1);
   });
 
+  test('gives direct recommendation replies a short conclusion-first format', () => {
+    const messages = buildMessages(createSession(), '直接推荐几款 MacBook', {
+      analysis: { interaction_mode: 'CURATE', conversation_flow: 'SHARE', topic: 'MacBook' },
+    });
+    expect(messages[0].content).toContain('先直接说结论');
+    expect(messages[0].content).toContain('不再追问');
+    expect(messages[0].content).toContain('总字数不超过 72 字');
+  });
+
+  test('falls back to a compact direct recommendation when the model ignores the limit', async () => {
+    const longReply = '我懂你的意思，不过在真正推荐之前，我还是想再确认一下你的使用场景、预算、屏幕大小、内存需求和工作强度，因为这些信息都会影响最终选择，所以我不想现在就贸然下结论。';
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: '耳机', product_category: '耳机', shopping_intent: 'explicit', interaction_mode: 'CURATE', recommendation_readiness: 1 }))
+      .mockResolvedValueOnce(creatorCall(longReply))
+      .mockResolvedValueOnce(creatorCall(longReply));
+    const search = vi.fn().mockResolvedValue({
+      products: [{ id: 'p1', title: '稳固跑步耳机', description: 'Secure ear hooks for running.', productUrl: 'https://shop.example/p1' }],
+      unavailable: false,
+    });
+    const result = await createChatOrchestrator({ complete, search })('直接推荐跑步耳机', createSession());
+    expect(result.reply).toBe('我直接给你几款，具体资料我放在下面，你按场景和预算挑就好。');
+    expect(result.reply.length).toBeLessThanOrEqual(80);
+  });
+
+  test('uses a link-specific fallback when the user asks for the product link', async () => {
+    const longReply = '我再详细解释一下为什么要结合预算、用途、型号和屏幕大小来判断，具体还要看你的工作强度、使用习惯和长期需求，这些信息都会影响最后的选择，我不想随便给结论。';
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: 'MacBook', product_category: 'MacBook', shopping_intent: 'explicit', interaction_mode: 'CURATE', recommendation_readiness: 1 }))
+      .mockResolvedValueOnce(creatorCall(longReply))
+      .mockResolvedValueOnce(creatorCall(longReply));
+    const search = vi.fn().mockResolvedValue({
+      products: [{ id: 'p1', title: 'MacBook Air', description: 'Lightweight Apple laptop', productUrl: 'https://shop.example/p1' }],
+      unavailable: false,
+    });
+    const result = await createChatOrchestrator({ complete, search })('给我链接啊', Object.assign(createSession(), { pendingProduct: 'MacBook', currentTopic: 'MacBook' }));
+    expect(result.reply).toBe('链接在下面的商品卡片里，点对应卡片就能打开。');
+  });
+
+  test('does not accept the generic hesitation sentence for an explicit recommendation', async () => {
+    const complete = vi.fn()
+      .mockResolvedValueOnce(analysisCall({ topic: 'MacBook', product_category: 'MacBook', shopping_intent: 'explicit', interaction_mode: 'CURATE', recommendation_readiness: 1 }))
+      .mockResolvedValueOnce(creatorCall('这个我先不急着替你下结论，慢慢聊就好。'))
+      .mockResolvedValueOnce(creatorCall('这个我先不急着替你下结论，慢慢聊就好。'));
+    const search = vi.fn().mockResolvedValue({
+      products: [{ id: 'p1', title: 'MacBook Air', description: 'Lightweight Apple laptop', productUrl: 'https://shop.example/p1' }],
+      unavailable: false,
+    });
+    const result = await createChatOrchestrator({ complete, search })('直接推荐', Object.assign(createSession(), { pendingProduct: 'MacBook', currentTopic: 'MacBook' }));
+    expect(result.reply).toBe('我直接给你几款，具体资料我放在下面，你按场景和预算挑就好。');
+  });
+
   test('uses SHIFT when the user explicitly leaves the current topic', () => {
     const session = createSession();
     session.currentTopic = '跑步';
@@ -342,6 +393,16 @@ describe('final interaction model', () => {
     const result = applyConversationPolicy({ shopping_intent: 'none', interaction_mode: 'SHARE', recommendation_readiness: 0 }, '那你帮我看看有什么合适的', { pendingProduct: '耳机' });
     expect(result.interaction_mode).toBe('CURATE');
     expect(result.topic).toBe('耳机');
+  });
+
+  test('a link request continues the pending product instead of falling back to generic chat', () => {
+    const result = applyConversationPolicy(
+      { shopping_intent: 'none', interaction_mode: 'SHARE', recommendation_readiness: 0 },
+      '给我链接啊',
+      { pendingProduct: 'MacBook', currentTopic: 'MacBook' },
+    );
+    expect(result.interaction_mode).toBe('CURATE');
+    expect(result.topic).toBe('MacBook');
   });
 
   test('explicit recommendation follow-up curates the known product without asking again', async () => {

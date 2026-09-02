@@ -1,6 +1,14 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+const MEMORY_SIGNAL_PATTERN = /不喜欢|喜欢|偏好|预算|最近开始(?:跑步|运动|健身)|平时(?:喜欢|主要)穿|跑步(?:的时候)?耳机.*(?:掉|松)|耳机.*(?:掉|松)/u;
+const MEMORY_COMMAND_PATTERN = /直接推荐|推荐|链接|地址|商品页|购买页|给我|我需要|想买|买(?:一个|一款|一台)|帮我|今天|今晚|我准备|推荐的东西|我直接/u;
+
+export function isPersistentMemoryFact(value) {
+  const text = String(value || '').trim();
+  return Boolean(text) && MEMORY_SIGNAL_PATTERN.test(text) && !MEMORY_COMMAND_PATTERN.test(text);
+}
+
 // Small JSON FileStore for the MVP. It intentionally has no database dependency.
 export class FileStore {
   constructor(filePath) {
@@ -36,18 +44,18 @@ export class FileStore {
 
   saveMemory(visitorId, facts, sourceConversationId = null) {
     if (!visitorId) return;
-    const existing = this.memories.get(visitorId) || [];
-    const durable = (facts || []).map(String).filter((fact) => /预算|喜欢|不喜欢|偏好|兴趣|跑步|穿搭|健身|通勤/.test(fact));
+    const existing = (this.memories.get(visitorId) || []).filter((fact) => isPersistentMemoryFact(fact.text));
+    const durable = (facts || []).map(String).filter(isPersistentMemoryFact);
     const merged = [...existing, ...durable.map((text) => ({ text, sourceConversationId, createdAt: new Date().toISOString() }))];
     const byText = new Map(merged.map((fact) => [fact.text, fact]));
     this.memories.set(visitorId, [...byText.values()].slice(-16));
     this.flush();
   }
 
-  getMemory(visitorId) { return (this.memories.get(visitorId) || []).map((fact) => fact.text); }
+  getMemory(visitorId) { return (this.memories.get(visitorId) || []).filter((fact) => isPersistentMemoryFact(fact.text)).map((fact) => fact.text); }
 
   listMemory(visitorId) {
-    return (this.memories.get(visitorId) || []).map(({ text, ...fact }) => ({ text, ...fact }));
+    return (this.memories.get(visitorId) || []).filter((fact) => isPersistentMemoryFact(fact.text)).map(({ text, ...fact }) => ({ text, ...fact }));
   }
 
   deleteMemory(visitorId, text) {

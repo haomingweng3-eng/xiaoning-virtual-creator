@@ -1,5 +1,5 @@
 import { ANALYZE_TOOL, FORCE_ANALYZE, buildAnalysisMessages } from './prompts.js';
-import { classifyMessageFallback, findProductCategory, hasExplicitRecommendationRequest } from './intent.js';
+import { classifyMessageFallback, findProductCategory, hasCommerceFollowUpRequest, hasExplicitRecommendationRequest } from './intent.js';
 
 const MODES = ['REACT', 'SHARE', 'ASK', 'CALLBACK', 'CURATE'];
 const FLOWS = ['CONTINUE', 'EXPAND', 'SHARE', 'SHIFT', 'CALLBACK'];
@@ -115,7 +115,7 @@ export function applyConversationPolicy(analysis, message, context = {}) {
   const explicitConfirmation = hasStoredNeed && hasExplicitRecommendationRequest(message);
   const implicitReady = next.shopping_intent === 'implicit' && next.recommendation_readiness >= 0.75 && hasStoredNeed;
 
-  if ((explicitRequest && hasKnownNeed) || explicitConfirmation) {
+  if ((explicitRequest && hasKnownNeed) || explicitConfirmation || (hasCommerceFollowUpRequest(message) && hasKnownNeed)) {
     return {
       ...next,
       shopping_intent: 'explicit',

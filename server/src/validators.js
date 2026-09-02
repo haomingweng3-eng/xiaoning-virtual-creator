@@ -14,6 +14,7 @@ export function validateReply({
   disallowCommerceSuggestions = false,
   disallowQuestion = false,
   maxQuestions = Infinity,
+  maxChars = Infinity,
   previousReply = '',
 }) {
   const text = String(reply || '');
@@ -32,6 +33,7 @@ export function validateReply({
   if (CUSTOMER_SERVICE_WORDS.some((word) => text.includes(word))) reasons.push('customer-service-tone');
   if (disallowQuestion && /[？?]/u.test(text)) reasons.push('interview-question-streak');
   if ((text.match(/[？?]/gu) || []).length > maxQuestions) reasons.push('too-many-questions');
+  if ([...text].length > maxChars) reasons.push('reply-too-long');
   if (LEAKED_META_INSTRUCTION_PATTERN.test(text)) reasons.push('leaked-meta-instruction');
   if (String(previousReply).trim() && text.trim() === String(previousReply).trim()) reasons.push('duplicate-previous-reply');
   if (!text.trim()) reasons.push('empty-reply');

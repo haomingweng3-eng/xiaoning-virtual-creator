@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { classifyMessage } from '../src/intent.js';
+import { classifyMessage, findProductCategory } from '../src/intent.js';
 
 describe('classifyMessage', () => {
   test('negative emotion overrides an explicit shopping request', () => {
@@ -29,5 +29,18 @@ describe('classifyMessage', () => {
       allowSearch: true,
       inheritedProduct: '鼠标',
     });
+  });
+
+  test('recognizes a link request as a shopping follow-up for the pending product', () => {
+    expect(classifyMessage('给我链接啊', { pendingProduct: 'MacBook' })).toEqual({
+      scene: 'shopping',
+      allowSearch: true,
+      inheritedProduct: 'MacBook',
+    });
+  });
+
+  test('recognizes MacBook as a product category for direct recommendations', () => {
+    expect(findProductCategory('我需要 MacBook')).toBe('MacBook');
+    expect(findProductCategory('想买一台笔记本')).toBe('电脑');
   });
 });

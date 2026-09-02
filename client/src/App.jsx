@@ -116,7 +116,7 @@ function ConversationDrawer({ conversations, activeId, onSelect, onNew, onDelete
 }
 
 function MemoryDrawer({ memory, onDelete, onClear, onClose }) {
-  return <div className="management-backdrop" role="presentation" onClick={onClose}><aside className="management-drawer memory-drawer" role="dialog" aria-modal="true" aria-label="小柠记住的" onClick={(event) => event.stopPropagation()}><div className="management-heading"><div><span>LIGHTWEIGHT MEMORY</span><h2>小柠记住的</h2></div><button type="button" onClick={onClose} aria-label="关闭记忆">×</button></div><p className="memory-caption">只保留对以后挑选有帮助的偏好、预算和兴趣。</p>{memory.length ? <div className="drawer-items">{memory.map((item) => <div className="drawer-item memory-item" key={item.text}><div><span>{item.type}</span><strong>{item.text}</strong></div><button type="button" aria-label={`删除记忆${item.text}`} onClick={() => onDelete(item.text)}>×</button></div>)}</div> : <p className="memory-empty">还没有需要记住的事。</p>}{memory.length > 0 && <button type="button" className="clear-memory" onClick={onClear}>清空全部记忆</button>}</aside></div>;
+  return <div className="management-backdrop" role="presentation" onClick={onClose}><aside className="management-drawer memory-drawer" role="dialog" aria-modal="true" aria-label="小柠记住的" onClick={(event) => event.stopPropagation()}><div className="management-heading"><div><span>LIGHTWEIGHT MEMORY</span><h2>小柠记住的</h2></div><button type="button" onClick={onClose} aria-label="关闭记忆">×</button></div><p className="memory-caption">只保留你明确说过、以后挑选有帮助的偏好、预算和兴趣；同一设备会跨新对话保留。</p>{memory.length ? <div className="drawer-items">{memory.map((item) => <div className="drawer-item memory-item" key={item.text}><div><span>{item.type}</span><strong>{item.text}</strong></div><button type="button" aria-label={`删除记忆${item.text}`} onClick={() => onDelete(item.text)}>×</button></div>)}</div> : <p className="memory-empty">还没有需要记住的事。</p>}{memory.length > 0 && <button type="button" className="clear-memory" onClick={onClear}>清空全部记忆</button>}</aside></div>;
 }
 
 export function AvatarStage({
@@ -198,7 +198,7 @@ function Sidebar({ conversations, activeId, memory, onSelect, onNew, onDelete, o
     <div className="sidebar-brand"><img src="/assets/xiaoning-main.png" alt="" /><div><strong>小柠 <span>✦</span></strong><small>生活方式虚拟创作者</small></div></div>
     <button type="button" className="sidebar-new" onClick={onNew}>＋ <span>新对话</span></button>
     <div className="sidebar-section"><div className="sidebar-section-heading"><span>最近对话</span><small>{conversations.length}</small></div><div className="sidebar-conversations">{conversations.map((item) => <div className={`sidebar-conversation ${item.conversationId === activeId ? 'is-active' : ''}`} key={item.conversationId}><button type="button" onClick={() => onSelect(item.conversationId)}><span className="conversation-icon">▢</span><span className="conversation-copy"><strong>{item.title || '新对话'}</strong><small>{formatConversationTime(item.updatedAt)}</small></span></button><button type="button" className="sidebar-delete" aria-label={`删除${item.title || '对话'}`} onClick={() => onDelete(item.conversationId)}>×</button></div>)}</div></div>
-    <div className="sidebar-memory"><button type="button" className="memory-heading" onClick={onOpenMemory}><span>♡</span><strong>小柠记住的</strong><span>›</span></button>{memory.slice(0, 3).map((item) => <div className="memory-preview" key={item.text}><span>{item.text}</span><b>{item.type}</b></div>)}{!memory.length && <p>还没有需要记住的事。</p>}</div>
+    <div className="sidebar-memory"><button type="button" className="memory-heading" onClick={onOpenMemory}><span>🔖</span><strong>小柠记住的</strong></button>{memory.slice(0, 3).map((item) => <div className={`memory-preview memory-preview-${item.type}`} key={item.text}><span>{item.text}</span><b>{item.type}</b></div>)}{!memory.length && <p>还没有需要记住的事。</p>}<button type="button" className="memory-all" onClick={onOpenMemory}>查看全部记忆 <span>›</span></button></div>
     <div className="sidebar-footer">小柠 · 陪你慢慢选</div>
   </aside>;
 }
@@ -213,11 +213,14 @@ function CreatorPanel({ creator, todayNote, avatar, configuredMode, configuredMo
 }
 
 function UserMessage({ message }) {
-  return <article className="history-message history-message-user"><span>你</span><p>{message.text}</p></article>;
+  return <article className="history-message history-message-user"><p>{message.text}</p></article>;
 }
 
-function CreatorMessage({ message, creatorName = '小柠' }) {
-  return <article className="history-message history-message-creator"><span>{creatorName}</span><div>{message.segments.map((segment, index) => <p key={`${segment.content}-${index}`} className={segment.type === 'creator_note' ? 'creator-note-segment' : ''}>{segment.content}</p>)}</div></article>;
+function CreatorMessage({ message, creatorName = '小柠', showMeta = true }) {
+  return <article className={`history-message history-message-creator ${showMeta ? '' : 'history-message-continuation'}`}>
+    {showMeta ? <div className="creator-message-meta"><span className="message-avatar">小</span><strong>{creatorName}</strong><time>{message.time || '刚刚'}</time></div> : <div className="creator-message-meta-spacer" aria-hidden="true" />}
+    <div className="creator-message-body">{message.segments.map((segment, index) => <p key={`${segment.content}-${index}`} className={segment.type === 'creator_note' ? 'creator-note-segment' : ''}>{segment.content}</p>)}</div>
+  </article>;
 }
 
 function HistoryDrawer({ messages, creatorName, onClose }) {
@@ -244,11 +247,18 @@ function Composer({ input, setInput, onSubmit, loading, status = 'idle' }) {
   const statusText = loading
     ? (status === 'listening' ? '小柠 · 正在听你说' : '小柠 · 正在想')
     : '和小柠说点什么';
+  function handleKeyDown(event) {
+    const isComposing = event.nativeEvent.isComposing || event.keyCode === 229;
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      onSubmit(input);
+    }
+  }
   return (
     <div className="composer-block">
       <div className="composer-status" aria-live="polite"><span className={loading ? 'is-active' : ''}>{statusText}</span></div>
       <form className="composer" onSubmit={(event) => { event.preventDefault(); onSubmit(input); }}>
-        <input value={input} onChange={(event) => setInput(event.target.value)} disabled={loading} placeholder="和小柠说点什么…" aria-label="和小柠说点什么…" />
+        <textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={handleKeyDown} disabled={loading} placeholder="和小柠说点什么…" aria-label="和小柠说点什么…" rows="1" />
         <button type="submit" aria-label="发送" disabled={loading || !input.trim()}>发送 <span aria-hidden="true">↗</span></button>
       </form>
     </div>
@@ -301,8 +311,8 @@ function ProductShelf({ products, topic }) {
   if (!products.length) return null;
   return (
     <section className="product-shelf" aria-label="小柠帮你挑">
-      <div className="shelf-heading"><div><span>FROM THE LIVE ROOM</span><h2>小柠帮你挑{topic ? ` · ${topic}` : ''}</h2></div><p>主播正在讲，商品只是辅助信息</p></div>
-      <div className="product-list">{products.map((product, index) => <ProductCard key={`${product.productUrl || product.url}-${index}`} product={product} index={index} />)}</div>
+      <div className="shelf-heading"><div><span>CREATOR PICKS</span><h2>小柠帮你挑{topic ? ` · ${topic}` : ''}</h2></div><p>根据你刚才说的{topic ? `${topic}需求` : '需求'}，我先留下这几款。</p></div>
+      <div className={`product-list product-list-count-${products.length}`}>{products.map((product, index) => <ProductCard key={`${product.productUrl || product.url}-${index}`} product={product} index={index} />)}</div>
     </section>
   );
 }
@@ -325,6 +335,12 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   const [managementOpen, setManagementOpen] = useState(null);
   const revealTimer = useRef(null);
   const thinkingTimer = useRef(null);
+  const messageListRef = useRef(null);
+
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [messages, loading, shelfProducts]);
 
   useEffect(() => {
     let active = true;
@@ -428,10 +444,10 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
         <section className="conversation-pane" data-testid="conversation-pane">
           <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} onOpenConversations={() => setManagementOpen('conversations')} onOpenMemory={() => setManagementOpen('memory')} />
           <div className="conversation-body">
-            <div className="conversation-heading"><div><span>CONVERSATION</span><h2>{session.title || topic || '和小柠聊聊'}</h2></div><div className="conversation-heading-actions"><span>{session.updatedAt ? formatConversationTime(session.updatedAt) : '刚刚'}</span><button type="button" aria-label="搜索">⌕</button><button type="button" aria-label="更多">•••</button></div></div>
-            {messages.length ? <div className="message-list">{messages.map((message, index) => message.role === 'user' ? <UserMessage key={`message-user-${index}`} message={message} /> : <CreatorMessage key={`message-creator-${index}`} message={message} creatorName={creator.name} />)}{loading && <TypingIndicator />}</div> : <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
+            <div className="conversation-heading"><div><h2>{session.title || topic || '和小柠聊聊'}</h2></div><div className="conversation-heading-actions"><span>{session.updatedAt ? formatConversationTime(session.updatedAt) : '刚刚'}</span><button type="button" aria-label="更多">•••</button></div></div>
+            {messages.length ? <div className="message-list" ref={messageListRef}>{messages.map((message, index) => message.role === 'user' ? <UserMessage key={`message-user-${index}`} message={message} /> : <CreatorMessage key={`message-creator-${index}`} message={message} creatorName={creator.name} showMeta={index === 0 || messages[index - 1]?.role !== 'assistant'} />)}{loading && <TypingIndicator />}{shelfProducts.length > 0 && <ProductShelf products={shelfProducts} topic={topic} />}</div> : <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
           </div>
-          <div className="conversation-compose"><Composer input={input} setInput={setInput} onSubmit={submitMessage} loading={loading} status={status} /><ProductShelf products={shelfProducts} topic={topic} /></div>
+          <div className="conversation-compose"><Composer input={input} setInput={setInput} onSubmit={submitMessage} loading={loading} status={status} /></div>
         </section>
         <CreatorPanel creator={creator} todayNote={session.todayNote} avatar={avatar} configuredMode={configuredMode} configuredMood={configuredMood} status={status} topic={topic} currentPick={stageState?.currentPick || null} recentInteractions={recentInteractions} onOpenHistory={() => setHistoryOpen(true)} shelfProducts={shelfProducts} />
       </div>

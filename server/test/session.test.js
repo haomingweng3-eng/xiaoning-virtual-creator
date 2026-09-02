@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { appendTurn, createSession, mergePreferences, mergeUserFacts, addRecentTopic } from '../src/session.js';
+import { appendTurn, cleanUserFacts, createSession, mergePreferences, mergeUserFacts, addRecentTopic } from '../src/session.js';
 
 describe('session memory', () => {
   test('starts without intimacy or relationship progression state', () => {
@@ -38,5 +38,12 @@ describe('session memory', () => {
     addRecentTopic(session, '工作');
     expect(session.userFacts).toEqual(['最近在赶一个项目。']);
     expect(session.recentTopics).toEqual(['工作']);
+  });
+
+  test('removes recommendation commands from user facts before they become memory context', () => {
+    const session = createSession();
+    session.userFacts = ['我不喜欢入耳式耳机', '直接推荐', '给我链接', '我需要MacBook'];
+    cleanUserFacts(session);
+    expect(session.userFacts).toEqual(['我不喜欢入耳式耳机']);
   });
 });

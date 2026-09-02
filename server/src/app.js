@@ -2,7 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { createSession } from './session.js';
+import { cleanUserFacts, createSession } from './session.js';
 import { getSessionState } from './orchestrator.js';
 import { FileStore } from './fileStore.js';
 
@@ -82,6 +82,7 @@ export function createApp({ chat, store = null, filePath = null } = {}) {
     const visitorId = typeof request.body?.visitorId === 'string' ? request.body.visitorId.trim() : '';
     const { conversationId, session } = getSession(request.body?.conversationId || request.body?.sessionId, visitorId);
     if (!session.visitorId) session.visitorId = visitorId;
+    cleanUserFacts(session);
     if (session.visitorId) session.userFacts = [...new Set([...(fileStore.getMemory(session.visitorId) || []), ...(session.userFacts || [])])];
     try {
       const result = await chat(message, session);

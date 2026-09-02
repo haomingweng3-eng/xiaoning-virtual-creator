@@ -1,4 +1,4 @@
-# 小柠：情感陪伴 + 智能带货虚拟达人 MVP
+# 小柠：情感陪伴与智能带货虚拟达人
 
 小柠是一个真实 LLM 与真实商品 Provider 驱动的 Lifestyle Virtual Creator：先理解情绪、延续相关上下文和表达自己的生活方式观点，只有用户明确需要挑商品时才进入带货。
 
@@ -13,6 +13,8 @@
 - **Memory**：每个 `conversationId` 独立保存 history、明确事实、偏好、话题和 pendingProduct；相关时召回，无关时隔离。
 - **Commerce**：Shopify Global Catalog 优先，Tavily fallback；只有 `CURATE && products.length > 0` 才展示 Product Shelf。
 - **Product Evidence**：所有卖点来自真实 Provider 字段并保留 evidence；无依据参数、虚构亲测和裸价格不会展示。
+
+这是一个 24 小时 Vibe Coding MVP。它的核心不是商城搜索，而是先陪用户聊天、理解情绪和上下文，只有消费需求明确时才调用真实商品 Provider。
 
 ![情绪陪伴](artifacts/visual-qa/02-emotional.png)
 
@@ -136,6 +138,7 @@ scripts/
   companion-commerce-qa.mjs        # Companion + Commerce 真实 Smoke QA
   visual-qa.mjs                    # 浏览器截图与 HTML 报告
 docs/
+  final-submission.md               # 最终提交文档
   final-report.md
   delivery-outline.md
 artifacts/visual-qa/
@@ -150,7 +153,7 @@ artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 eviden
 
 ## 已知限制
 
-- 这是 24 小时 MVP；Session 仅保存在服务端内存，进程重启会丢失。
+- 这是 24 小时 MVP；运行态 Session 在内存中管理，同时由 JSON FileStore 保存会话和记忆，未引入数据库或账号体系。
 - 没有登录、持久化数据库、支付和下单闭环。
 - 不是实时 Live2D、口型同步或视频数字人。
 - 商品字段依赖外部 Provider；真实商品可能缺少价格、图片或足够证据。
@@ -160,6 +163,7 @@ artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 eviden
 
 ## 更多文档
 
+- [最终提交文档](docs/final-submission.md)
 - [开发问题与解决方案](docs/final-report.md)
 - [Conversation Management 交付报告](docs/conversation-management-report.md)
 - [Companion + Commerce 交付报告](docs/companion-commerce-report.md)

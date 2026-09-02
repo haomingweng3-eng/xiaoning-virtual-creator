@@ -83,7 +83,7 @@ describe('Final Creator Home', () => {
     await userEvent.setup().type(input, '我准备白衬衫牛仔裤');
     await screen.getByRole('button', { name: '发送' }).click();
     expect(await screen.findByText('这一身的比例很舒服。')).toBeInTheDocument();
-    expect(document.querySelectorAll('.message-avatar')).toHaveLength(0);
+    expect(document.querySelectorAll('.history-message-creator .message-avatar')).toHaveLength(1);
   });
 
   test('shows a livestream status and creator entry points without magazine copy', async () => {
@@ -134,6 +134,24 @@ describe('Final Creator Home', () => {
     await act(async () => resolveChat({ interaction: 'REACT', segments: [{ type: 'text', content: '先慢一点。' }], products: [] }));
     expect(await screen.findByText('先慢一点。')).toBeInTheDocument();
     expect(screen.getByTestId('avatar-stage')).toHaveClass('avatar-stage-mood-warm');
+  });
+
+  test('sends on Enter but keeps Shift+Enter available for multiline input', async () => {
+    const sendChat = vi.fn().mockResolvedValue({ interaction: 'SHARE', segments: [{ type: 'text', content: '收到。' }], products: [] });
+    render(<App getSessionState={vi.fn().mockResolvedValue(session)} sendChat={sendChat} />);
+    await screen.findByTestId('avatar-stage');
+    const input = screen.getByPlaceholderText('和小柠说点什么…');
+    fireEvent.change(input, { target: { value: '按回车发送' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', shiftKey: false });
+    expect(sendChat).toHaveBeenCalledWith('按回车发送', expect.any(String));
+
+    fireEvent.change(input, { target: { value: '第一行' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', shiftKey: true });
+    expect(sendChat).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(input, { target: { value: '拼音输入中' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', isComposing: true });
+    expect(sendChat).toHaveBeenCalledTimes(1);
   });
 
   test('maps an explicitly positive moment to the happy stage state', async () => {

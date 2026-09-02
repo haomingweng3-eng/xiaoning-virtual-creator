@@ -59,8 +59,14 @@ function isSafeExplicitFact(value) {
   return value.length >= 4
     && value.length <= 120
     && !/(如果|假设|可能|也许|要是|的话)/u.test(value)
+    && !/(直接推荐|推荐|链接|地址|给我|我需要|想买|买(?:一个|一款|一台)|帮我|下单)/u.test(value)
     && !/(对方|他|她|他们).*(喜欢|爱|在意)/u.test(value)
     && !/(恋爱了|约会|情侣|亲密度|一定会|肯定会)/u.test(value);
+}
+
+export function cleanUserFacts(session) {
+  if (!session || !Array.isArray(session.userFacts)) return;
+  session.userFacts = session.userFacts.filter((fact) => isSafeExplicitFact(String(fact || '').trim()));
 }
 
 export function mergeUserFacts(session, candidates, sourceMessage = '') {

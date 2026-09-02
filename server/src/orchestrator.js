@@ -3,13 +3,15 @@ import {
   countConsecutiveAssistantQuestions,
   topicsAreRelated,
 } from './conversationAnalysis.js';
-import { addRecentTopic, appendTurn, mergeDurableMemory, mergePreferences, mergeUserFacts } from './session.js';
+import { addRecentTopic, appendTurn, cleanUserFacts, mergeDurableMemory, mergePreferences, mergeUserFacts } from './session.js';
 import { buildMessages, CREATOR_REPLY_TOOL, FORCE_COMPANION } from './prompts.js';
 import { validateReply } from './validators.js';
-import { classifyMessageFallback, findProductCategory } from './intent.js';
+import { classifyMessageFallback, findProductCategory, hasCommerceFollowUpRequest } from './intent.js';
 import { rankInsightfulProducts } from './productInsights.js';
 
 const NO_TRUSTED_PRODUCT_REPLY = '我刚看了一圈，但没找到足够靠谱的具体款，先不乱推给你。';
+const COMPACT_CURATE_FALLBACK = '我直接给你几款，具体资料我放在下面，你按场景和预算挑就好。';
+const COMPACT_LINK_FALLBACK = '链接在下面的商品卡片里，点对应卡片就能打开。';
 
 function parseToolCall(call, expectedName) {
   if (!call || call.function?.name !== expectedName) return null;
@@ -86,15 +88,17 @@ async function generateCreatorReply({ complete, session, message, analysis, prod
   if (!segments.length) return null;
   const safeSegments = segments.map((segment) => ({ ...segment, content: sanitizeCreatorContent(segment.content) }));
   const reply = joinSegments(safeSegments);
+  if (analysis.interaction_mode === 'CURATE' && /这个我先不急着替你下结论|慢慢聊就好/u.test(reply)) return null;
   const validation = validateReply({
     reply,
     searchCalled: products.length > 0,
     negativeEmotion: analysis.emotion_intensity >= 5 && ['sad', 'angry', 'anxious', 'tired'].includes(analysis.emotion),
     disallowProductDetails: products.length > 0,
     disallowCommerceSuggestions: analysis.interaction_mode !== 'CURATE',
-    disallowQuestion: countConsecutiveAssistantQuestions(session.history) >= 2
-      && analysis.interaction_mode !== 'ASK',
+    disallowQuestion: analysis.interaction_mode === 'CURATE'
+      || (countConsecutiveAssistantQuestions(session.history) >= 2 && analysis.interaction_mode !== 'ASK'),
     maxQuestions: 1,
+    maxChars: analysis.interaction_mode === 'CURATE' ? 72 : Infinity,
     previousReply,
   });
   return validation.valid ? { segments: safeSegments, reply, preferences_update: args.preferences_update || {} } : null;
@@ -102,6 +106,7 @@ async function generateCreatorReply({ complete, session, message, analysis, prod
 
 export function createChatOrchestrator({ complete, search }) {
   return async function chat(message, session) {
+    cleanUserFacts(session);
     const { analysis } = await analyzeConversation({ complete, session, message });
     if (classifyMessageFallback(message).scene === 'commerce-exit') session.pendingProduct = null;
     const previousTopic = session.currentTopic;
@@ -148,6 +153,8 @@ export function createChatOrchestrator({ complete, search }) {
         ? '听起来今天确实挺烦的，先不用急着把它想明白。'
         : analysis.interaction_mode === 'CALLBACK'
           ? `记得，你前面提过${session.userFacts.find((fact) => /喜欢|不喜欢|偏好|预算/.test(String(fact))) || '这个偏好'}。这次我会把它算进去。`
+          : analysis.interaction_mode === 'CURATE'
+            ? (hasCommerceFollowUpRequest(message) ? COMPACT_LINK_FALLBACK : COMPACT_CURATE_FALLBACK)
           : '这个我先不急着替你下结论，慢慢聊就好。';
       creatorReply = { segments: [{ type: 'text', content: fallback }], reply: fallback, preferences_update: {} };
     }
@@ -156,7 +163,7 @@ export function createChatOrchestrator({ complete, search }) {
     appendTurn(session, message, creatorReply.reply);
     if (analysis.interaction_mode === 'REACT') {
       session.pendingProduct = null;
-    } else if (mentionedCategory || findProductCategory(analysis.topic)) {
+    } else if (mentionedCategory || findProductCategory(analysis.topic) || findProductCategory(session.currentTopic)) {
       // 记住明确说出的品类，但不因此触发搜索；下一轮仍需用户确认或满足 readiness 门槛。
       session.pendingProduct = mentionedCategory || findProductCategory(analysis.topic);
     }

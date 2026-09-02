@@ -24,7 +24,7 @@ export const RESPONSE_MODES = {
   SHARE: '表达一个与当前内容有关的具体观点。',
   ASK: '只问一个确实会改变判断的问题。',
   CALLBACK: '自然带到一条已经提供的相关事实，不强调“记忆”。',
-  CURATE: '表达挑选思路和取舍，商品详情由页面承载。',
+  CURATE: '用户明确要推荐时，先直接说结论。最多两个短段落，总字数不超过 72 字；不再追问已经问过的用途、预算或偏好，不复述前面对话，不解释为什么之前没有推荐。不要写商品价格、链接或详细参数，商品详情由页面卡片承载。',
 };
 
 // ============================================================
@@ -183,7 +183,7 @@ function selectRelevantHistory(session, userMessage) {
   const messageCategory = findProductCategory(message);
   const currentCategory = findProductCategory(session.currentTopic);
   const pendingProduct = session.pendingProduct;
-  const continuationCue = /之前|上次|刚才|那个|帮我看看|有什么合适|还想/.test(message);
+  const continuationCue = /之前|上次|刚才|那个|帮我看看|有什么合适|还想|链接|地址|商品页|购买页|发我|下单/.test(message);
   const callbackCue = /终于|做完|完成|下班|回来了|忙完|告一段落/.test(message);
   const shiftCue = /对了|另外|说起来|算了|不聊.+了|换个话题/.test(message);
   const messageTopicCue = /跑步|运动|耳机|手机|工作|项目|穿搭|约会|见面|通勤|白衬衫|牛仔裤/.test(message);
