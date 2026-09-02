@@ -51,4 +51,28 @@ describe('Conversation Management', () => {
       expect(first.body.conversationId).not.toBe(second.body.conversationId);
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
+
+  test('keeps lightweight memory separate and supports delete', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'xiaoning-memory-'));
+    const filePath = join(directory, 'conversations.json');
+    try {
+      const chat = vi.fn(async (message, session) => {
+        if (message.includes('不喜欢入耳式')) session.userFacts.push(message);
+        const remembered = session.userFacts.some((fact) => fact.includes('不喜欢入耳式'));
+        return { interaction: 'SHARE', conversationFlow: 'CALLBACK', segments: [{ type: 'text', content: remembered ? '已注意到这个偏好。' : '没有相关偏好。' }], reply: remembered ? '已注意到这个偏好。' : '没有相关偏好。', products: [], analysis: { interaction_mode: 'SHARE' } };
+      });
+      const app = createApp({ chat, filePath });
+      const visitorId = 'memory-visitor';
+      const a = await request(app).post('/api/conversations').send({ visitorId });
+      await request(app).post('/api/chat').send({ visitorId, conversationId: a.body.conversationId, message: '我不喜欢入耳式耳机' });
+      const c = await request(app).post('/api/conversations').send({ visitorId });
+      const recalled = await request(app).post('/api/chat').send({ visitorId, conversationId: c.body.conversationId, message: '想买跑步耳机' });
+      expect(recalled.body.reply).toContain('已注意到');
+      await request(app).delete(`/api/memory/${encodeURIComponent('我不喜欢入耳式耳机')}`).query({ visitorId }).expect(200);
+      const d = await request(app).post('/api/conversations').send({ visitorId });
+      const clean = await request(app).post('/api/chat').send({ visitorId, conversationId: d.body.conversationId, message: '想买跑步耳机' });
+      expect(clean.body.reply).toContain('没有相关偏好');
+      expect((await request(app).get('/api/memory').query({ visitorId })).body.memory).toEqual([]);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
 });

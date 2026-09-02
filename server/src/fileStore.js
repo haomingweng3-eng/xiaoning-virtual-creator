@@ -19,7 +19,7 @@ export class FileStore {
         if (record?.conversationId && record?.session) this.records.set(record.conversationId, record);
       }
       for (const [visitorId, facts] of Object.entries(Array.isArray(parsed) ? {} : (parsed?.memories || {}))) {
-        if (Array.isArray(facts)) this.memories.set(visitorId, facts);
+        if (Array.isArray(facts)) this.memories.set(visitorId, facts.map((fact) => typeof fact === 'string' ? { text: fact, sourceConversationId: null, createdAt: null } : fact));
       }
     } catch (error) {
       if (error.code !== 'ENOENT') console.warn(`FileStore load skipped: ${error.message}`);
@@ -34,13 +34,31 @@ export class FileStore {
     this.flush();
   }
 
-  saveMemory(visitorId, facts) {
+  saveMemory(visitorId, facts, sourceConversationId = null) {
     if (!visitorId) return;
-    this.memories.set(visitorId, [...new Set((facts || []).map(String).filter(Boolean))].slice(-16));
+    const existing = this.memories.get(visitorId) || [];
+    const durable = (facts || []).map(String).filter((fact) => /预算|喜欢|不喜欢|偏好|兴趣|跑步|穿搭|健身|通勤/.test(fact));
+    const merged = [...existing, ...durable.map((text) => ({ text, sourceConversationId, createdAt: new Date().toISOString() }))];
+    const byText = new Map(merged.map((fact) => [fact.text, fact]));
+    this.memories.set(visitorId, [...byText.values()].slice(-16));
     this.flush();
   }
 
-  getMemory(visitorId) { return [...(this.memories.get(visitorId) || [])]; }
+  getMemory(visitorId) { return (this.memories.get(visitorId) || []).map((fact) => fact.text); }
+
+  listMemory(visitorId) {
+    return (this.memories.get(visitorId) || []).map(({ text, ...fact }) => ({ text, ...fact }));
+  }
+
+  deleteMemory(visitorId, text) {
+    const current = this.memories.get(visitorId) || [];
+    const next = current.filter((fact) => fact.text !== text);
+    this.memories.set(visitorId, next);
+    this.flush();
+    return next.length !== current.length;
+  }
+
+  clearMemory(visitorId) { this.memories.delete(visitorId); this.flush(); }
 
   flush() {
     if (!this.filePath) return;

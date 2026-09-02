@@ -72,3 +72,22 @@ export async function deleteConversation(conversationId) {
   if (!response.ok) throw new Error('删除会话失败');
   return response.json();
 }
+
+export async function getMemory() {
+  const response = await fetch(`/api/memory?visitorId=${encodeURIComponent(getVisitorId())}`);
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) throw new Error('获取记忆失败');
+  return data.memory || [];
+}
+
+export async function deleteMemory(text) {
+  const response = await fetch(`/api/memory/${encodeURIComponent(text)}?visitorId=${encodeURIComponent(getVisitorId())}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error('删除记忆失败');
+  return response.json();
+}
+
+export async function clearMemory() {
+  const response = await fetch(`/api/memory?visitorId=${encodeURIComponent(getVisitorId())}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error('清空记忆失败');
+  return response.json();
+}

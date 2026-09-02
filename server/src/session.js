@@ -73,6 +73,13 @@ export function mergeUserFacts(session, candidates, sourceMessage = '') {
   session.userFacts = session.userFacts.slice(-MAX_FACTS);
 }
 
+export function mergeDurableMemory(session, sourceMessage = '') {
+  const source = String(sourceMessage || '').trim();
+  const durable = source.match(/(?:我(?:不喜欢|喜欢|偏好)[^。！？]{2,40}|预算[^。！？]{1,30}(?:以内|以下|左右)|最近开始(?:跑步|运动|健身)|平时(?:喜欢|主要)穿[^。！？]{2,30})/u)?.[0];
+  if (durable && !session.userFacts.includes(durable)) session.userFacts.push(durable);
+  session.userFacts = session.userFacts.slice(-MAX_FACTS);
+}
+
 export function addRecentTopic(session, topic) {
   const value = String(topic || '').trim();
   if (!value) return;

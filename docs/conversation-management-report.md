@@ -29,7 +29,7 @@
 }
 ```
 
-长期 Memory 现在在 FileStore 的 `memories[visitorId]` 中独立保存；Conversation 的 `history`、当前话题和 pendingProduct 仍独立保存。每轮仅由现有 relevance gating 召回相关事实。本轮没有扩大 Memory 管理入口范围。
+长期 Memory 现在在 FileStore 的 `memories[visitorId]` 中独立保存；Conversation 的 `history`、当前话题和 pendingProduct 仍独立保存。每轮仅由现有 relevance gating 召回相关事实。前端提供“小柠记住的”入口，可删除单条或清空全部。
 
 ## 3. FileStore 结构
 
@@ -76,5 +76,5 @@
 
 - FileStore 是 MVP 级 JSON 文件存储，没有多进程锁；不适合多实例并发部署。
 - Session history 仍受现有最大长度限制；长期 Memory 仍属于服务端内存/文件中的 session 数据。
-- 当前未增加独立的 Memory 管理页面；按本轮范围不扩大实现。
+- Memory 管理目前是轻量 Drawer，不包含编辑、分类管理或复杂检索。
 - 本轮按要求未运行完整 Golden QA、Visual QA 或长时间真实 LLM 测试。

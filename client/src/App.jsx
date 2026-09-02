@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createConversation as defaultCreateConversation, createSessionId, deleteConversation as defaultDeleteConversation, getClientSessionId, listConversations as defaultListConversations, sendChat as defaultSendChat, getSessionState as defaultGetSessionState } from './api.js';
+import { clearMemory as defaultClearMemory, createConversation as defaultCreateConversation, createSessionId, deleteConversation as defaultDeleteConversation, deleteMemory as defaultDeleteMemory, getClientSessionId, getMemory as defaultGetMemory, listConversations as defaultListConversations, sendChat as defaultSendChat, getSessionState as defaultGetSessionState } from './api.js';
 
 const DEFAULT_CREATOR_CONFIG = {
   name: '小柠',
@@ -91,7 +91,7 @@ function deriveTopic(result, fallback = '') {
   return result?.currentTopic || result?.analysis?.topic || fallback;
 }
 
-function CreatorHeader({ creator, status, topic, onNewSession }) {
+function CreatorHeader({ creator, status, topic, onNewSession, onOpenConversations, onOpenMemory }) {
   return (
     <header className="creator-header">
       <div>
@@ -102,11 +102,21 @@ function CreatorHeader({ creator, status, topic, onNewSession }) {
         <p>{status}{topic ? ` · ${topic}` : ''}</p>
       </div>
       <div className="creator-header-actions">
+        <button type="button" className="new-conversation" onClick={onOpenConversations}>对话</button>
+        <button type="button" className="new-conversation" onClick={onOpenMemory}>小柠记住的</button>
         <button type="button" className="new-conversation" onClick={onNewSession}>新对话</button>
         <span className="creator-header-mark" aria-hidden="true" />
       </div>
     </header>
   );
+}
+
+function ConversationDrawer({ conversations, activeId, onSelect, onNew, onDelete, onClose }) {
+  return <div className="management-backdrop" role="presentation" onClick={onClose}><aside className="management-drawer" role="dialog" aria-modal="true" aria-label="会话列表" onClick={(event) => event.stopPropagation()}><div className="management-heading"><div><span>CONVERSATIONS</span><h2>最近对话</h2></div><button type="button" onClick={onClose} aria-label="关闭会话列表">×</button></div><button type="button" className="drawer-new" onClick={onNew}>＋ 新对话</button><div className="drawer-items">{conversations.map((item) => <div className={item.conversationId === activeId ? 'drawer-item is-active' : 'drawer-item'} key={item.conversationId}><button type="button" onClick={() => onSelect(item.conversationId)}><strong>{item.title || '新对话'}</strong><small>{item.currentTopic || `${item.messageCount || 0} 条消息`}</small></button><button type="button" aria-label={`删除${item.title || '对话'}`} onClick={() => onDelete(item.conversationId)}>×</button></div>)}</div></aside></div>;
+}
+
+function MemoryDrawer({ memory, onDelete, onClear, onClose }) {
+  return <div className="management-backdrop" role="presentation" onClick={onClose}><aside className="management-drawer memory-drawer" role="dialog" aria-modal="true" aria-label="小柠记住的" onClick={(event) => event.stopPropagation()}><div className="management-heading"><div><span>LIGHTWEIGHT MEMORY</span><h2>小柠记住的</h2></div><button type="button" onClick={onClose} aria-label="关闭记忆">×</button></div><p className="memory-caption">只保留对以后挑选有帮助的偏好、预算和兴趣。</p>{memory.length ? <div className="drawer-items">{memory.map((item) => <div className="drawer-item memory-item" key={item.text}><div><span>{item.type}</span><strong>{item.text}</strong></div><button type="button" aria-label={`删除记忆${item.text}`} onClick={() => onDelete(item.text)}>×</button></div>)}</div> : <p className="memory-empty">还没有需要记住的事。</p>}{memory.length > 0 && <button type="button" className="clear-memory" onClick={onClear}>清空全部记忆</button>}</aside></div>;
 }
 
 export function AvatarStage({
@@ -279,7 +289,7 @@ function TypingIndicator() {
   return <div className="typing-row" aria-label="小柠正在想一会儿"><span /><span /><span /></div>;
 }
 
-export default function App({ sendChat = defaultSendChat, getSessionState = defaultGetSessionState, listConversations = defaultListConversations, createConversation = defaultCreateConversation, deleteConversation = defaultDeleteConversation }) {
+export default function App({ sendChat = defaultSendChat, getSessionState = defaultGetSessionState, listConversations = defaultListConversations, createConversation = defaultCreateConversation, deleteConversation = defaultDeleteConversation, getMemory = defaultGetMemory, deleteMemory = defaultDeleteMemory, clearMemory = defaultClearMemory }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -289,6 +299,8 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   const [historyOpen, setHistoryOpen] = useState(false);
   const [sessionId, setSessionId] = useState(() => getClientSessionId());
   const [conversations, setConversations] = useState([]);
+  const [memory, setMemory] = useState([]);
+  const [managementOpen, setManagementOpen] = useState(null);
   const revealTimer = useRef(null);
   const thinkingTimer = useRef(null);
 
@@ -303,8 +315,9 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
         : { role: 'assistant', segments: normalizeSegments({ reply: turn.content }), products: [], id: `restored-assistant-${index}` }));
     }).catch(() => { if (active) setSession({ recentTopics: [], currentTopic: null, history: [], creatorConfig: DEFAULT_CREATOR_CONFIG }); });
     listConversations().then((items) => { if (active) setConversations(items); }).catch(() => {});
+    getMemory().then((items) => { if (active) setMemory(items); }).catch(() => {});
     return () => { active = false; };
-  }, [getSessionState, listConversations, sessionId]);
+  }, [getSessionState, listConversations, getMemory, sessionId]);
 
   useEffect(() => {
     return () => {
@@ -320,6 +333,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
       setSessionId(created.conversationId);
       setSession(created);
       setConversations((current) => [{ conversationId: created.conversationId, title: '新对话', messageCount: 0, updatedAt: created.updatedAt }, ...current]);
+      setManagementOpen(null);
     }).catch(() => setSessionId(createSessionId()));
     setSession(null);
     setMessages([]);
@@ -336,6 +350,9 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     if (conversationId === sessionId) startNewConversation();
   }
 
+  async function removeMemory(text) { await deleteMemory(text); setMemory((current) => current.filter((item) => item.text !== text)); }
+  async function removeAllMemory() { await clearMemory(); setMemory([]); }
+
   async function submitMessage(rawMessage) {
     const message = String(rawMessage || '').trim();
     if (!message || loading) return;
@@ -350,6 +367,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     }, 280);
     try {
       const result = await sendChat(message, sessionId);
+      getMemory().then((items) => setMemory(items)).catch(() => {});
       if (thinkingTimer.current) window.clearTimeout(thinkingTimer.current);
       const products = uniqueProducts(result.products);
       const mood = deriveMood(result, message);
@@ -383,8 +401,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   return (
     <main className={`creator-app ${messages.length ? 'has-conversation' : ''}`} data-testid="livestream-room">
       <div className="room-shell">
-        <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} />
-        {conversations.length > 0 && <nav className="conversation-list" aria-label="会话列表"><span>我的对话</span>{conversations.slice(0, 8).map((item) => <div key={item.conversationId} className={item.conversationId === sessionId ? 'conversation-item is-active' : 'conversation-item'}><button type="button" onClick={() => setSessionId(item.conversationId)}>{item.title || '新对话'} <small>{item.messageCount || 0}</small></button><button type="button" aria-label={`删除${item.title || '对话'}`} onClick={() => removeConversation(item.conversationId)}>×</button></div>)}</nav>}
+        <CreatorHeader creator={creator} status={status === 'thinking' ? '正在想' : status === 'listening' ? '正在听你说' : (MOOD_COPY[configuredMood] || '正在聊')} topic={topic} onNewSession={startNewConversation} onOpenConversations={() => setManagementOpen('conversations')} onOpenMemory={() => setManagementOpen('memory')} />
         <AvatarStage creatorName={creator.name} mode={configuredMode} mood={configuredMood} status={status} topic={topic} media={media} fallbackImage={avatar.fallbackImage} modeObjectPosition={avatar.modeObjectPosition} recentInteractions={recentInteractions} currentPick={stageState?.currentPick || null} onOpenHistory={() => setHistoryOpen(true)} />
         {!messages.length && <EntryPrompts session={session} onSelect={submitMessage} disabled={loading} />}
         {messages.length > 0 && loading && <TypingIndicator />}
@@ -392,6 +409,8 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
         <ProductShelf products={shelfProducts} topic={topic} />
       </div>
       {historyOpen && <HistoryDrawer messages={messages} creatorName={creator.name} onClose={() => setHistoryOpen(false)} />}
+      {managementOpen === 'conversations' && <ConversationDrawer conversations={conversations} activeId={sessionId} onSelect={(id) => { setSessionId(id); setManagementOpen(null); }} onNew={startNewConversation} onDelete={removeConversation} onClose={() => setManagementOpen(null)} />}
+      {managementOpen === 'memory' && <MemoryDrawer memory={memory} onDelete={removeMemory} onClear={removeAllMemory} onClose={() => setManagementOpen(null)} />}
     </main>
   );
 }

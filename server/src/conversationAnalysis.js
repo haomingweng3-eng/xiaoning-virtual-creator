@@ -90,6 +90,15 @@ export function applyConversationPolicy(analysis, message, context = {}) {
     return { ...next, interaction_mode: 'REACT', shopping_intent: 'none', recommendation_readiness: 0 };
   }
 
+  const memoryCallbackCue = /之前|上次|还记得|我说过|那个偏好/u.test(String(message || ''));
+  const hasRelevantMemory = (context.userFacts || []).some((fact) => {
+    const value = String(fact || '');
+    return /喜欢|不喜欢|偏好|预算/.test(value) && (/耳机|入耳|手机|穿搭|跑步|通勤|商品/.test(String(message || '')) || value.split(/[，。！？s]/u).some((term) => term.length >= 2 && String(message || '').includes(term)));
+  });
+  if (memoryCallbackCue && hasRelevantMemory && next.shopping_intent !== 'explicit') {
+    return { ...next, interaction_mode: 'CALLBACK', shopping_intent: 'none', recommendation_readiness: 0 };
+  }
+
   const callbackCue = /终于|做完|完成|忙完|下班|告一段落/.test(String(message || ''));
   const hasRelatedCallbackFact = (context.userFacts || []).some((fact) => /项目|工作|赶|加班/.test(String(fact || '')));
   if (callbackCue && hasRelatedCallbackFact) {

@@ -54,6 +54,11 @@ describe('final interaction model', () => {
     expect(result.products).toEqual([]);
     expect(search).not.toHaveBeenCalled();
   });
+
+  test('uses CALLBACK for an explicit relevant long-term memory cue', () => {
+    const analysis = applyConversationPolicy({ topic: '耳机', shopping_intent: 'none', interaction_mode: 'SHARE' }, '之前我说过不喜欢入耳式，你还记得吗？', { userFacts: ['我不喜欢入耳式耳机'] });
+    expect(analysis.interaction_mode).toBe('CALLBACK');
+  });
   test('keeps character and conversation style prompts within their Chinese character budgets', () => {
     const countChinese = (value) => (String(value).match(/[\u3400-\u9fff]/g) || []).length;
     expect(countChinese(CHARACTER_CORE)).toBeGreaterThanOrEqual(300);

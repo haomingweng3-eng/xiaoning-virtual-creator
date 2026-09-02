@@ -40,6 +40,11 @@ export function createApp({ chat, store = null, filePath = null } = {}) {
   // 获取 Creator Home 内容和当前会话上下文
   app.get('/api/conversations', (request, response) => response.json({ conversations: fileStore.list(request.query.visitorId) }));
 
+  app.get('/api/memory', (request, response) => response.json({ memory: fileStore.listMemory(request.query.visitorId).map(({ text }) => ({ text, type: /预算|元|以内/.test(text) ? '预算' : /跑步|穿搭|健身|通勤/.test(text) ? '兴趣' : '偏好' })) }));
+
+  app.delete('/api/memory', (request, response) => { fileStore.clearMemory(request.query.visitorId); return response.json({ ok: true }); });
+  app.delete('/api/memory/:text', (request, response) => { const removed = fileStore.deleteMemory(request.query.visitorId, decodeURIComponent(request.params.text)); return removed ? response.json({ ok: true }) : response.sendStatus(404); });
+
   app.post('/api/conversations', (request, response) => {
     const visitorId = typeof request.body?.visitorId === 'string' ? request.body.visitorId.trim() : '';
     const conversationId = randomUUID();
@@ -76,7 +81,7 @@ export function createApp({ chat, store = null, filePath = null } = {}) {
       const result = await chat(message, session);
       session.hasGreeted = true;
       persist(conversationId, session);
-      fileStore.saveMemory(session.visitorId, session.userFacts);
+      fileStore.saveMemory(session.visitorId, session.userFacts, conversationId);
       return response.json({
         sessionId: conversationId,
         conversationId,

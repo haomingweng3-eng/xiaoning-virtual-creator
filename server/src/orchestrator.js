@@ -3,7 +3,7 @@ import {
   countConsecutiveAssistantQuestions,
   topicsAreRelated,
 } from './conversationAnalysis.js';
-import { addRecentTopic, appendTurn, mergePreferences, mergeUserFacts } from './session.js';
+import { addRecentTopic, appendTurn, mergeDurableMemory, mergePreferences, mergeUserFacts } from './session.js';
 import { buildMessages, CREATOR_REPLY_TOOL, FORCE_COMPANION } from './prompts.js';
 import { validateReply } from './validators.js';
 import { classifyMessageFallback, findProductCategory } from './intent.js';
@@ -113,6 +113,7 @@ export function createChatOrchestrator({ complete, search }) {
       : (currentTopic ? 1 : 0);
     session.conversationFlow = analysis.conversation_flow;
     mergeUserFacts(session, analysis.explicit_facts, message);
+    mergeDurableMemory(session, message);
     addRecentTopic(session, currentTopic);
 
     let products = [];
@@ -146,7 +147,7 @@ export function createChatOrchestrator({ complete, search }) {
       const fallback = analysis.interaction_mode === 'REACT'
         ? '听起来今天确实挺烦的，先不用急着把它想明白。'
         : analysis.interaction_mode === 'CALLBACK'
-          ? '你前面提过的那件事，终于告一段落了。先让自己松一口气。'
+          ? `记得，你前面提过${session.userFacts.find((fact) => /喜欢|不喜欢|偏好|预算/.test(String(fact))) || '这个偏好'}。这次我会把它算进去。`
           : '这个我先不急着替你下结论，慢慢聊就好。';
       creatorReply = { segments: [{ type: 'text', content: fallback }], reply: fallback, preferences_update: {} };
     }

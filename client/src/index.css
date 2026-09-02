@@ -25,6 +25,26 @@ button:disabled { cursor: not-allowed; }
 .conversation-item > button:last-child { color: #777a70; font-size: 16px; }
 .conversation-item.is-active button:first-child { color: #d4dd8a; }
 .conversation-item small { color: #777a70; margin-left: 6px; }
+.management-backdrop { position: fixed; z-index: 30; inset: 0; display: flex; justify-content: flex-end; background: rgb(0 0 0 / 48%); }
+.management-drawer { width: min(420px, 92vw); height: 100%; overflow-y: auto; padding: 28px; background: #252921; box-shadow: -14px 0 35px rgb(0 0 0 / 18%); }
+.management-heading { display: flex; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #454b41; }
+.management-heading span { color: #8f9285; font-size: 9px; letter-spacing: .17em; }
+.management-heading h2 { margin: 6px 0 0; color: #f3ecdf; font-family: Georgia, "Songti SC", serif; font-size: 25px; font-weight: 500; }
+.management-heading button { border: 0; background: transparent; color: #b7b4aa; font-size: 27px; }
+.drawer-new, .clear-memory { width: 100%; margin: 18px 0 8px; border: 1px solid #596149; background: transparent; color: #d5dd91; padding: 11px 12px; text-align: left; }
+.drawer-items { display: grid; }
+.drawer-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; border-bottom: 1px solid #393e36; }
+.drawer-item > button, .drawer-item > div { min-width: 0; padding: 14px 0; border: 0; background: transparent; color: #eee7dc; text-align: left; }
+.drawer-item > button:first-child { display: grid; gap: 5px; }
+.drawer-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 400; }
+.drawer-item small, .memory-caption, .memory-empty { color: #96998d; font-size: 11px; }
+.drawer-item > button:last-child { color: #777a70; font-size: 18px; }
+.drawer-item.is-active strong { color: #d5dd91; }
+.memory-caption { line-height: 1.6; }
+.memory-item { grid-template-columns: minmax(0, 1fr) auto; }
+.memory-item > div { display: grid; gap: 5px; }
+.memory-item span { color: #aeb77a; font-size: 10px; }
+.clear-memory { color: #b7b4aa; text-align: center; }
 .creator-header-mark { width: 8px; height: 8px; margin-right: 4px; border-radius: 50%; background: #bdca7c; box-shadow: 0 0 0 4px rgb(189 202 124 / 10%); }
 
 .avatar-stage-frame { position: relative; display: grid; grid-template-columns: minmax(300px, 39%) minmax(0, 61%); overflow: hidden; min-height: 430px; border: 1px solid #3b4038; border-radius: 18px; background: #252a23; }
