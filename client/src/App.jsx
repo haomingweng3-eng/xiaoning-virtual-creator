@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { clearMemory as defaultClearMemory, createConversation as defaultCreateConversation, createSessionId, deleteConversation as defaultDeleteConversation, deleteMemory as defaultDeleteMemory, getClientSessionId, getMemory as defaultGetMemory, listConversations as defaultListConversations, sendChat as defaultSendChat, getSessionState as defaultGetSessionState } from './api.js';
+import { clearMemory as defaultClearMemory, createConversation as defaultCreateConversation, createSessionId, deleteConversation as defaultDeleteConversation, deleteMemory as defaultDeleteMemory, getCurrentConversationId, getMemory as defaultGetMemory, listConversations as defaultListConversations, sendChat as defaultSendChat, getSessionState as defaultGetSessionState } from './api.js';
 
 const DEFAULT_CREATOR_CONFIG = {
   name: '小柠',
@@ -102,7 +102,7 @@ function CreatorHeader({ creator, status, topic, onNewSession, onOpenConversatio
         <p>{status}{topic ? ` · ${topic}` : ''}</p>
       </div>
       <div className="creator-header-actions">
-        <button type="button" className="new-conversation" onClick={onOpenConversations}>对话</button>
+        <button type="button" className="new-conversation" onClick={onOpenConversations}>会话</button>
         <button type="button" className="new-conversation" onClick={onOpenMemory}>小柠记住的</button>
         <button type="button" className="new-conversation" onClick={onNewSession}>新对话</button>
         <span className="creator-header-mark" aria-hidden="true" />
@@ -297,7 +297,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
   const [stageState, setStageState] = useState(null);
   const [shelfProducts, setShelfProducts] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [sessionId, setSessionId] = useState(() => getClientSessionId());
+  const [conversationId, setConversationId] = useState(() => getCurrentConversationId());
   const [conversations, setConversations] = useState([]);
   const [memory, setMemory] = useState([]);
   const [managementOpen, setManagementOpen] = useState(null);
@@ -306,7 +306,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
 
   useEffect(() => {
     let active = true;
-    getSessionState(sessionId).then((nextSession) => {
+    getSessionState(conversationId).then((nextSession) => {
       if (!active) return;
       setSession(nextSession);
       const restored = Array.isArray(nextSession.history) ? nextSession.history : [];
@@ -317,7 +317,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     listConversations().then((items) => { if (active) setConversations(items); }).catch(() => {});
     getMemory().then((items) => { if (active) setMemory(items); }).catch(() => {});
     return () => { active = false; };
-  }, [getSessionState, listConversations, getMemory, sessionId]);
+  }, [getSessionState, listConversations, getMemory, conversationId]);
 
   useEffect(() => {
     return () => {
@@ -330,11 +330,11 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     if (revealTimer.current) window.clearTimeout(revealTimer.current);
     if (thinkingTimer.current) window.clearTimeout(thinkingTimer.current);
     createConversation().then((created) => {
-      setSessionId(created.conversationId);
+      setConversationId(created.conversationId);
       setSession(created);
       setConversations((current) => [{ conversationId: created.conversationId, title: '新对话', messageCount: 0, updatedAt: created.updatedAt }, ...current]);
       setManagementOpen(null);
-    }).catch(() => setSessionId(createSessionId()));
+    }).catch(() => setConversationId(createSessionId()));
     setSession(null);
     setMessages([]);
     setInput('');
@@ -344,10 +344,10 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
     setHistoryOpen(false);
   }
 
-  async function removeConversation(conversationId) {
-    await deleteConversation(conversationId);
-    setConversations((current) => current.filter((item) => item.conversationId !== conversationId));
-    if (conversationId === sessionId) startNewConversation();
+  async function removeConversation(idToRemove) {
+    await deleteConversation(idToRemove);
+    setConversations((current) => current.filter((item) => item.conversationId !== idToRemove));
+    if (idToRemove === conversationId) startNewConversation();
   }
 
   async function removeMemory(text) { await deleteMemory(text); setMemory((current) => current.filter((item) => item.text !== text)); }
@@ -366,7 +366,8 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
       setStageState((current) => ({ ...current, status: 'thinking' }));
     }, 280);
     try {
-      const result = await sendChat(message, sessionId);
+      const result = await sendChat(message, conversationId);
+      listConversations().then((items) => setConversations(items)).catch(() => {});
       getMemory().then((items) => setMemory(items)).catch(() => {});
       if (thinkingTimer.current) window.clearTimeout(thinkingTimer.current);
       const products = uniqueProducts(result.products);
@@ -409,7 +410,7 @@ export default function App({ sendChat = defaultSendChat, getSessionState = defa
         <ProductShelf products={shelfProducts} topic={topic} />
       </div>
       {historyOpen && <HistoryDrawer messages={messages} creatorName={creator.name} onClose={() => setHistoryOpen(false)} />}
-      {managementOpen === 'conversations' && <ConversationDrawer conversations={conversations} activeId={sessionId} onSelect={(id) => { setSessionId(id); setManagementOpen(null); }} onNew={startNewConversation} onDelete={removeConversation} onClose={() => setManagementOpen(null)} />}
+      {managementOpen === 'conversations' && <ConversationDrawer conversations={conversations} activeId={conversationId} onSelect={(id) => { setConversationId(id); setManagementOpen(null); }} onNew={startNewConversation} onDelete={removeConversation} onClose={() => setManagementOpen(null)} />}
       {managementOpen === 'memory' && <MemoryDrawer memory={memory} onDelete={removeMemory} onClear={removeAllMemory} onClose={() => setManagementOpen(null)} />}
     </main>
   );

@@ -177,6 +177,7 @@ export function getSessionState(session) {
     todayNote: session.todayNote,
     recentTopics: session.recentTopics,
     currentTopic: session.currentTopic || null,
+    title: session.title || null,
     conversationFlow: session.conversationFlow,
     creatorContent: session.creatorContent,
     creatorConfig: session.creatorConfig,

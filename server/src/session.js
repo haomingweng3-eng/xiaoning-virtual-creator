@@ -12,6 +12,7 @@ export function createSession({ visitorId = null, conversationId = null, created
   return {
     visitorId,
     conversationId,
+    title: null,
     createdAt,
     updatedAt: createdAt,
     history: [],

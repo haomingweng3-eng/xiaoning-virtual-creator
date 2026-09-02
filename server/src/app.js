@@ -70,6 +70,12 @@ export function createApp({ chat, store = null, filePath = null } = {}) {
     return response.json({ ...state, conversationId, sessionId: conversationId, visitorId: session.visitorId, history: session.history });
   });
 
+  app.get('/api/conversations/:conversationId', (request, response) => {
+    const session = sessions.get(request.params.conversationId);
+    if (!session || (request.query.visitorId && session.visitorId !== request.query.visitorId)) return response.sendStatus(404);
+    return response.json({ conversationId: request.params.conversationId, visitorId: session.visitorId, ...getSessionState(session), history: session.history });
+  });
+
   app.post('/api/chat', async (request, response) => {
     const message = typeof request.body?.message === 'string' ? request.body.message.trim() : '';
     if (!message) return response.status(400).json({ reply: '先和我说点什么吧～', products: [] });
@@ -80,6 +86,7 @@ export function createApp({ chat, store = null, filePath = null } = {}) {
     try {
       const result = await chat(message, session);
       session.hasGreeted = true;
+      if (!session.title) session.title = session.currentTopic || message.slice(0, 32);
       persist(conversationId, session);
       fileStore.saveMemory(session.visitorId, session.userFacts, conversationId);
       return response.json({

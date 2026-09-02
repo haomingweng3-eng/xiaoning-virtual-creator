@@ -1,23 +1,23 @@
 const VISITOR_STORAGE_KEY = 'xiaoning.visitorId';
-const CONVERSATION_STORAGE_KEY = 'xiaoning.conversationId';
+const CONVERSATION_STORAGE_KEY = 'xiaoning.currentConversationId';
 
 export function createSessionId() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function getClientSessionId() {
+export function getCurrentConversationId() {
   try {
     const existing = window.localStorage.getItem(CONVERSATION_STORAGE_KEY);
     if (existing) return existing;
   } catch {
     // sessionStorage may be unavailable in a restricted browser context.
   }
-  const sessionId = createSessionId();
-  try { window.localStorage.setItem(CONVERSATION_STORAGE_KEY, sessionId); } catch {
+  const currentConversationId = createSessionId();
+  try { window.localStorage.setItem(CONVERSATION_STORAGE_KEY, currentConversationId); } catch {
     // Keep the in-memory id when storage is unavailable.
   }
-  return sessionId;
+  return currentConversationId;
 }
 
 export function getVisitorId() {
@@ -30,11 +30,11 @@ export function getVisitorId() {
   return visitorId;
 }
 
-export async function sendChat(message, sessionId = getClientSessionId()) {
+export async function sendChat(message, conversationId = getCurrentConversationId()) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ visitorId: getVisitorId(), conversationId: sessionId, message }),
+    body: JSON.stringify({ visitorId: getVisitorId(), conversationId, message }),
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data) {
@@ -43,8 +43,8 @@ export async function sendChat(message, sessionId = getClientSessionId()) {
   return data;
 }
 
-export async function getSessionState(sessionId = getClientSessionId()) {
-  const response = await fetch(`/api/session?conversationId=${encodeURIComponent(sessionId)}&visitorId=${encodeURIComponent(getVisitorId())}`);
+export async function getSessionState(conversationId = getCurrentConversationId()) {
+  const response = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}?visitorId=${encodeURIComponent(getVisitorId())}`);
   const data = await response.json().catch(() => null);
   if (!response.ok || !data) {
     throw new Error('获取会话状态失败');
