@@ -161,7 +161,7 @@ artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 eviden
 - 商品字段依赖外部 Provider；真实商品可能缺少价格、图片或足够证据。
 - Shopify/Tavily 和 LLM 都受外部网络、额度与 API 可用性影响。
 - 无可信结果时系统选择不推荐，因此某些查询会显示 0 个商品。
-- 当前本地仓库尚无 GitHub remote。由于本机没有 `gh` CLI，最终交付只完成本地提交；GitHub URL 不虚构。
+- GitHub：<https://github.com/haomingweng3-eng/xiaoning-virtual-creator>
 
 ## 更多文档
 

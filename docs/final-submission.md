@@ -94,8 +94,10 @@ Product Specifications 与 Selling Points 分离：规格回答“具体是什�
 
 ## 8. GitHub 发布状态
 
-本地最终整理和提交已完成。当前机器未安装 `gh` CLI，且仓库没有 GitHub remote，因此状态为：
+仓库已创建为公开仓库并成功 push：
 
-`GITHUB AUTH REQUIRED`
+GitHub：<https://github.com/haomingweng3-eng/xiaoning-virtual-creator>
 
-未创建远程仓库、未执行 push，也没有编造 GitHub URL。登录并安装 `gh` 后，可按 README 的启动方式继续完成远程创建和 push。
+- Visibility：Public
+- Branch：`main`
+- Push：PASS
