@@ -81,7 +81,7 @@ Product Specifications 与 Selling Points 分离：规格回答“具体是什�
 | 普通多轮聊天 | [04-normal-chat.png](screenshots/04-normal-chat.png) |
 | 产生需求但尚未推荐 | [05-pre-commerce.png](screenshots/05-pre-commerce.png) |
 | 明确需求后的真实推荐 | [06-curate.png](screenshots/06-curate.png) |
-| 会话 / 记忆隔离 | [07-topic-switch.png](screenshots/07-topic-switch.png) |
+| 会话 / 记忆隔离 | [09-topic-switch.png](screenshots/09-topic-switch.png) |
 | 390px 移动端 | [08-mobile.png](screenshots/08-mobile.png) |
 | 商品规格、卖点和推荐理由 | [07-product-detail.png](screenshots/07-product-detail.png) |
 
