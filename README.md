@@ -97,11 +97,9 @@ npx playwright install chromium
 npm run qa:visual
 ```
 
-Visual QA 会启动真实 Chromium，调用当前运行的真实前后端，不注入 mock 商品，并生成：
+Visual QA 会启动真实 Chromium，调用当前运行的真实前后端，不注入 mock 商品；运行结果只作为本地验证产物，不纳入最终作业目录。
 
-- `artifacts/visual-qa/01-home.png` 至 `09-product-detail.png`
-- `artifacts/visual-qa/visual-results.json`
-- `artifacts/visual-qa/report.html`
+- `artifacts/visual-qa/` 下的本地截图与报告
 
 已覆盖 1440、1024、768 和 390 宽度；报告记录 input、interaction mode、emotion、currentTopic、是否进入 commerce、provider、商品数和 PASS/FAIL。
 
@@ -140,13 +138,8 @@ scripts/
   companion-commerce-qa.mjs        # Companion + Commerce 真实 Smoke QA
   visual-qa.mjs                    # 浏览器截图与 HTML 报告
 docs/
-  final-submission.md               # 最终提交文档
-  final-report.md
-  delivery-outline.md
-artifacts/visual-qa/
-artifacts/release-screenshots/       # 最终提交文档使用的 9 张截图
-artifacts/naturalness-qa/            # 真实自然度验收报告与 transcript
-artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 evidence
+  final-submission.md               # 唯一最终提交文档
+  screenshots/                      # 最终 UI 截图
 ```
 
 ## 为什么不用重型 Live2D / 实时数字人
@@ -163,11 +156,6 @@ artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 eviden
 - 无可信结果时系统选择不推荐，因此某些查询会显示 0 个商品。
 - GitHub：<https://github.com/haomingweng3-eng/xiaoning-virtual-creator>
 
-## 更多文档
+## 交付文档
 
 - [最终提交文档](docs/final-submission.md)
-- [开发问题与解决方案](docs/final-report.md)
-- [Conversation Management 交付报告](docs/conversation-management-report.md)
-- [Companion + Commerce 交付报告](docs/companion-commerce-report.md)
-- [最终提交文档大纲](docs/delivery-outline.md)
-- [Visual QA 报告](artifacts/visual-qa/report.html)

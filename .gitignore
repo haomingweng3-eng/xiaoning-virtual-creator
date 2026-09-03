@@ -4,11 +4,12 @@ dist/
 .env.*
 !.env.example
 .DS_Store
+.vscode/
 coverage/
 *.log
 test-results/
 playwright-report/
 .playwright/
-artifacts/**/*.tmp
+artifacts/
 server/data/
 server/.data/
