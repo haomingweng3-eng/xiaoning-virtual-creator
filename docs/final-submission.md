@@ -4,7 +4,7 @@
 
 小柠是一个 Lifestyle Virtual Creator。她通过自然语言对话理解用户的情绪、需求和当前话题，结合相关的 Conversation / Memory 延续关系，并表达自己的生活方式观点。
 
-当用户形成明确的购物需求时，小柠才进入智能带货链路：调用真实商品 Provider，经过商品渲染门、证据提取和 ProductInsights，生成带有规格、卖点与个性化理由的推荐。项目在 24 小时 Vibe Coding 场景下完成，重点验证“陪伴关系 + 可信商品推荐”能否在同一条对话中自然衔接。
+当用户形成明确的购物需求时，小柠才进入智能带货链路：调用真实商品 Provider，经过商品渲染门、证据提取和 ProductInsights，生成带有规格、卖点与个性化理由的推荐。项目重点验证“陪伴关系 + 可信商品推荐”能否在同一条对话中自然衔接。
 
 ## 2. 需求拆解
 
@@ -101,7 +101,7 @@ Memory 只在当前话题相关时参与。比如用户表达工作疲劳时，�
 - `visitorId`：跨会话识别同一用户，承接相关偏好、预算和兴趣。
 - `conversationId`：隔离每个具体对话的 history、currentTopic 和 pendingProduct。
 
-当前支持新建、切换、删除和刷新恢复。FileStore 将会话记录和用户级 Memory 写入 JSON 文件，服务重启后可以恢复 MVP 所需的数据。Memory 只保存明确的偏好、预算、兴趣和商品约束，并结合当前话题进行召回。
+当前支持新建、切换、删除和刷新恢复。FileStore 将会话记录和用户级 Memory 写入 JSON 文件，服务重启后可以恢复会话和用户记忆。Memory 只保存明确的偏好、预算、兴趣和商品约束，并结合当前话题进行召回。
 
 ![会话与话题隔离](screenshots/09-topic-switch.png)
 
@@ -189,12 +189,12 @@ npm install
 npm run dev
 ```
 
-打开 <http://localhost:5173/>。生产前端构建和测试命令：
+打开 <http://localhost:5173/>。测试和前端生产构建命令：
 
 ```bash
 npm test
 npm run build
-npm run start
+npm run start  # 启动后端 API；浏览器开发页面使用 npm run dev
 ```
 
 真实 QA 命令：
@@ -234,4 +234,4 @@ npm run qa:visual
 公开仓库：<https://github.com/haomingweng3-eng/xiaoning-virtual-creator>
 
 - Branch：`main`
-- 最终提交：`24edbcf docs: refresh final screenshots`
+- 当前分支：`main`，最新代码以 GitHub 仓库为准。
