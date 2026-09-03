@@ -58,5 +58,5 @@ Policy：
 ## 已知限制
 
 - 真实 LLM 仍可能返回较宽泛的 topic 或 occasion，代码 Policy 负责兜底，但不替代语义理解。
-- FileStore 仍是 MVP JSON 文件；Memory 也受当前 FileStore 与服务生命周期约束。
+- FileStore 当前采用 JSON 文件；Memory 也受当前 FileStore 与服务生命周期约束。
 - 本轮没有运行完整 Golden QA、Visual QA 或长时场景测试。

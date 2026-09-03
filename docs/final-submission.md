@@ -176,7 +176,7 @@ Web Search 可能返回文章、列表页、排行榜或不完整商品。解决
 
 ## 12. 工程取舍
 
-24 小时 MVP 优先完成真实 LLM、Conversation / Memory、情感交互、真实商品 Provider 和 evidence-backed commerce。当前使用 JSON FileStore 和 CSS/PNG AvatarStage，适合验证产品链路；后续可替换为数据库、账号体系和更完整的数字人表现层。
+工程实现优先保证真实 LLM、Conversation / Memory、情感交互、真实商品 Provider 和 evidence-backed commerce。当前使用 JSON FileStore 和 CSS/PNG AvatarStage，保持核心链路清晰；后续可替换为数据库、账号体系和更完整的数字人表现层。
 
 ## 13. 运行方式
 

@@ -1,8 +1,8 @@
-# 小柠 Final MVP 项目报告
+# 小柠：情感陪伴与智能带货虚拟达人——项目报告
 
 ## 一、项目概述
 
-小柠是一个在 24 小时 Vibe Coding 笔试周期内完成的“情感陪伴 + 智能带货”虚拟达人 MVP。产品以原创 IP 虚拟达人为第一视觉中心，先理解用户的情绪和当前话题，再在用户明确需要挑选商品时调用真实商品 Provider。它不是 AI 女友、客服系统、ChatGPT clone 或商城搜索页。
+小柠是一个在规定的 Vibe Coding 周期内完成的“情感陪伴 + 智能带货”虚拟达人。产品以原创 IP 虚拟达人为第一视觉中心，先理解用户的情绪和当前话题，再在用户明确需要挑选商品时调用真实商品 Provider。
 
 ## 二、需求拆解
 
@@ -42,7 +42,7 @@ React UI / AvatarStage
   → Creator Reply + Product Shelf
 ```
 
-前端使用 React 18 + Vite，后端使用 Node.js + Express，Session 使用服务端内存 `Map<sessionId, Session>`。
+前端使用 React 18 + Vite，后端使用 Node.js + Express，运行态 Session 使用服务端内存 Map，并由 JSON FileStore 保存会话和 Memory，支持服务重启后恢复。
 
 ## 六、情感陪伴实现
 
@@ -115,11 +115,11 @@ Personalized reason:
 - Shopify 不可用或无结果时使用 Tavily 实时搜索。
 - QA 不注入 mock 商品。
 - 外部 Provider 缺字段时保留为空，不生成虚假价格、图片或参数。
-- 本轮 Golden CASE 5/10 与 Visual CURATE 均返回真实 Shopify 商品。
+- 真实链路 Smoke：当前 DeepSeek + Shopify 场景返回真实商品并进入 CURATE。
 
 ## 十、测试与质量保障
 
-- **Unit / Integration**：Server 90/90，Client 13/13。
+- **Unit / Integration**：Server 13 files / 106 tests，Client 17 tests，全部通过。
 - **Production Build**：Vite build exit 0。
 - **Golden QA**：10/10，覆盖情绪、正向反馈、隐式需求、明确带货、取消带货、Session 隔离、Callback、事实边界和 Product Evidence。
 - **Visual QA**：9/9，覆盖 1440、1024、768、390；所有截图来自真实浏览器和真实前后端。
@@ -139,11 +139,11 @@ Personalized reason:
 
 ## 十二、技术取舍
 
-24 小时内优先保证对话边界、上下文可信度、真实商品链路和可复现 QA。没有引入 Live2D、LiveTalking、Wav2Lip、MuseTalk、实时 TTS/WebRTC、数据库或支付系统，避免把主要风险转移到重型媒体与基础设施。
+工程实现优先保证对话边界、上下文可信度、真实商品链路和可复现 QA；当前使用轻量 AvatarStage、JSON FileStore 和外部 Provider，保持核心链路清晰并便于后续扩展。
 
 ## 十三、已知限制
 
-- Session 仅保存在内存中，服务重启后丢失。
+- Session 运行态保存在内存，同时由 JSON FileStore 持久化，服务重启后可恢复。
 - 无登录、持久化数据库、支付和下单闭环。
 - 当前不是实时 Live2D、视频数字人或口型同步。
 - 外部 LLM/Provider 受网络、额度和 API 可用性影响。
@@ -153,6 +153,6 @@ Personalized reason:
 ## 十四、GitHub
 
 - 本地 branch：`main`
-- Release commit：以最终 Release Freeze commit hash 为准。
-- 当前没有 Git remote，且本机没有 `gh` CLI。
-- GitHub URL 只能在真实创建并 push 成功后填写，不提供虚假链接。
+- Release commit：`14aa70c docs: document DeepSeek runtime`。
+- Remote：`origin` → `https://github.com/haomingweng3-eng/xiaoning-virtual-creator.git`。
+- GitHub：<https://github.com/haomingweng3-eng/xiaoning-virtual-creator>

@@ -74,7 +74,7 @@
 
 ## 6. 当前已知问题
 
-- FileStore 是 MVP 级 JSON 文件存储，没有多进程锁；不适合多实例并发部署。
+- FileStore 是 JSON 文件存储，没有多进程锁；当前适合单实例运行，不适合多实例并发部署。
 - Session history 仍受现有最大长度限制；长期 Memory 仍属于服务端内存/文件中的 session 数据。
 - Memory 管理目前是轻量 Drawer，不包含编辑、分类管理或复杂检索。
 - 本轮按要求未运行完整 Golden QA、Visual QA 或长时间真实 LLM 测试。

@@ -108,5 +108,5 @@
 
 - **写什么**：只填写真实创建并 push 成功的仓库 URL；当前本机无 `gh` 命令且无 remote，不能伪造。
 - **截图**：GitHub 仓库首页与 commit 页面（push 后由提交者补）。
-- **代码**：本地 `Final MVP` commit。
-- **待补字段**：`GitHub URL: [push 成功后填写]`
+- **代码**：GitHub `main` 分支当前最终提交 `14aa70c docs: document DeepSeek runtime`。
+- **GitHub URL**：<https://github.com/haomingweng3-eng/xiaoning-virtual-creator>

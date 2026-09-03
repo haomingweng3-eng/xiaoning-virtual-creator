@@ -15,7 +15,7 @@
 - **Product Evidence**：所有卖点来自真实 Provider 字段并保留 evidence；无依据参数、虚构亲测和裸价格不会展示。
 - **Product Specifications**：商品卡从真实 Provider 的 title、vendor、options、variants、metadata 等字段解析品牌、型号、版本和具体规格；没有证据就不显示。
 
-这是一个 24 小时 Vibe Coding MVP。它的核心不是商城搜索，而是先陪用户聊天、理解情绪和上下文，只有消费需求明确时才调用真实商品 Provider。
+这是一个围绕陪伴关系与可信推荐设计的 Vibe Coding 作品。它先陪用户聊天、理解情绪和上下文，只有消费需求明确时才调用真实商品 Provider。
 
 ![情绪陪伴](docs/screenshots/02-emotional.png)
 
@@ -151,11 +151,11 @@ artifacts/companion-commerce-qa/     # Companion + Commerce 真实 QA 与 eviden
 
 ## 为什么不用重型 Live2D / 实时数字人
 
-24 小时 MVP 的核心风险是对话边界、上下文可信度和商品事实，而不是渲染技术。当前使用原创透明 PNG + CSS 轻微 breathing/state tone，在不引入 CUDA、Live2D、Wav2Lip、MuseTalk、WebRTC、TTS pipeline 的情况下建立稳定的虚拟达人存在感。Avatar 与 LLM/Commerce 状态解耦，后续可替换表现层而不重写核心业务。
+项目将工程重点放在对话边界、上下文可信度和商品事实上。当前使用原创透明 PNG + CSS 轻微 breathing/state tone 建立稳定的虚拟达人存在感，Avatar 与 LLM/Commerce 状态解耦，后续可替换表现层而不重写核心业务。
 
 ## 已知限制
 
-- 这是 24 小时 MVP；运行态 Session 在内存中管理，同时由 JSON FileStore 保存会话和记忆，未引入数据库或账号体系。
+- 当前版本的运行态 Session 在内存中管理，同时由 JSON FileStore 保存会话和记忆，未引入数据库或账号体系。
 - 没有登录、持久化数据库、支付和下单闭环。
 - 不是实时 Live2D、口型同步或视频数字人。
 - 商品字段依赖外部 Provider；真实商品可能缺少价格、图片或足够证据。
