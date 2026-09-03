@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 dotenv.config({ path: new URL('../../.env', import.meta.url) });
 
 const port = Number(process.env.PORT) || 3001;
-const model = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
+const model = process.env.OPENAI_MODEL || 'deepseek-chat';
 
 async function complete(request) {
   if (!process.env.OPENAI_API_KEY) throw new Error('OpenAI API key is not configured');

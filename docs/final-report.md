@@ -6,7 +6,7 @@
 
 ## 二、需求拆解
 
-- **聊天**：真实 OpenAI-compatible LLM 对话，默认输出 1–3 个自然 message segments。
+- **聊天**：真实 DeepSeek `deepseek-chat` 对话，默认输出 1–3 个自然 message segments，通过 OpenAI-compatible SDK 接入。
 - **情感陪伴**：理解正负面情绪，保留事实边界，不把普通陪伴写成恋爱关系。
 - **虚拟达人**：原创 IP、AvatarStage、实时状态与最近互动共同构成直播间感。
 - **智能带货**：语义分析与确定性规则共同决定是否进入 CURATE。
@@ -33,7 +33,7 @@ React UI / AvatarStage
   → Session Isolation
   → ConversationAnalysis
   → Deterministic Interaction Policy
-  → OpenAI-compatible LLM
+  → DeepSeek `deepseek-chat`
   → Shopify Global Catalog
   → Tavily fallback
   → Product Rendering Gate
@@ -110,7 +110,7 @@ Personalized reason:
 
 ## 九、真实数据说明
 
-- 对话使用真实 OpenAI-compatible API。
+- 对话使用真实 DeepSeek API，通过 OpenAI-compatible Chat Completions / Tool Calling 接入。
 - 商品优先来自 Shopify Global Catalog。
 - Shopify 不可用或无结果时使用 Tavily 实时搜索。
 - QA 不注入 mock 商品。

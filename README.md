@@ -6,7 +6,7 @@
 
 ## 核心能力
 
-- **Chat**：真实 OpenAI-compatible Tool Calling 对话，默认 1–3 个自然 message segments。
+- **Chat**：真实 DeepSeek `deepseek-chat` Tool Calling 对话，默认 1–3 个自然 message segments；通过 OpenAI-compatible SDK 接入。
 - **Emotional Companion**：识别情绪并自然回应；负面情绪确定性禁止搜索商品。
 - **Virtual Creator**：原创 IP AvatarStage、`REACT / SHARE / ASK / CALLBACK / CURATE` 五种互动模式、最近 2–4 条互动与完整历史 drawer。
 - **Conversation Management**：`visitorId` 与 `conversationId` 分离；支持新建、列表、切换、删除、刷新恢复，并用 JSON FileStore 在 server restart 后恢复。
@@ -30,7 +30,7 @@ flowchart TD
     API --> SI[Session Isolation]
     SI --> FS[FileStore]
     SI --> CA[ConversationAnalysis]
-    CA --> LLM[OpenAI-compatible LLM / Tool Calling]
+    CA --> LLM[DeepSeek deepseek-chat / Tool Calling]
     LLM --> D{should_recommend?}
     D -- NO --> IP[Hard safety guardrails]
     D -- YES --> C[CURATE]
@@ -55,7 +55,7 @@ flowchart TD
 
 ```bash
 cp .env.example .env
-# 在 .env 中填写 OPENAI_API_KEY；Tavily fallback 需要 TAVILY_API_KEY
+# 在 .env 中填写 DeepSeek API key（变量名保留为 OPENAI_API_KEY）；Tavily fallback 需要 TAVILY_API_KEY
 npm install
 npm run dev
 ```
@@ -66,9 +66,9 @@ npm run dev
 
 | 变量 | 是否必需 | 说明 |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | 对话必需 | OpenAI-compatible API key |
-| `OPENAI_BASE_URL` | 可选 | 兼容服务地址 |
-| `OPENAI_MODEL` | 可选 | 支持 Tool Calling 的模型；默认 `gpt-3.5-turbo` |
+| `OPENAI_API_KEY` | 对话必需 | DeepSeek API key；变量名为 SDK 兼容命名 |
+| `OPENAI_BASE_URL` | 当前配置 | `https://api.deepseek.com/v1` |
+| `OPENAI_MODEL` | 当前配置 | `deepseek-chat` |
 | `TAVILY_API_KEY` | Tavily fallback 必需 | Shopify 无可信结果时的实时网页搜索 |
 | `PORT` | 可选 | Express 端口，默认 `3001` |
 

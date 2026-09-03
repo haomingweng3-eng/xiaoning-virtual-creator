@@ -10,7 +10,7 @@
 
 ### 2.1 聊天
 
-使用真实的 OpenAI-compatible Chat Completions / Tool Calling 完成多轮交流。每轮响应可以包含多个自然 message segments，并返回当前互动模式和分析结果供 UI 使用。
+使用真实 DeepSeek `deepseek-chat` 完成多轮交流，调用方式是 OpenAI-compatible Chat Completions / Tool Calling。每轮响应可以包含多个自然 message segments，并返回当前互动模式和分析结果供 UI 使用。
 
 ### 2.2 情感陪伴
 
@@ -64,7 +64,7 @@ flowchart TD
 
 - Frontend：React 18、Vite、CSS；包含三栏布局、AvatarStage、ConversationPane、MessageList、Composer 和 ProductShelf。
 - Backend：Node.js、Express；提供聊天、会话、记忆和健康检查 API。
-- LLM：通过环境变量配置 OpenAI-compatible Chat Completions / Tool Calling，默认模型为 `gpt-3.5-turbo`。
+- LLM：当前使用 DeepSeek `deepseek-chat`；通过 OpenAI-compatible Chat Completions / Tool Calling 接入，API key 变量名沿用 `OPENAI_API_KEY`。
 - Conversation / Memory：`visitorId` 负责用户级连续性，`conversationId` 负责会话级隔离；JSON FileStore 保存会话、事实、偏好、话题和 pendingProduct。
 - Commerce：Shopify Global Catalog 优先，Tavily fallback，之后进入 Product Rendering Gate、Product Evidence 和 ProductInsights。
 
@@ -184,7 +184,7 @@ Web Search 可能返回文章、列表页、排行榜或不完整商品。解决
 
 ```bash
 cp .env.example .env
-# 在 .env 中填写 OPENAI_API_KEY；Tavily fallback 需要 TAVILY_API_KEY
+# 在 .env 中填写 DeepSeek API key（变量名为 OPENAI_API_KEY）；Tavily fallback 需要 TAVILY_API_KEY
 npm install
 npm run dev
 ```
